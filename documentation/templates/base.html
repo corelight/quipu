@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <title>{% block title %}{{ config.title }}{% endblock title %}</title>
+    <link rel="stylesheet" href="{{ config.extra.embedded_base }}/site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <div class="docs-layout">
+      <aside class="docs-sidebar">
+        <a class="brand" href="{{ config.extra.embedded_base }}/index.html">Quipu</a>
+        <span class="brand-subtitle">Documentation</span>
+        <nav aria-label="Documentation">
+          <a href="{{ config.extra.embedded_base }}/index.html"{% if current_path == "/" %} aria-current="page"{% endif %}>Overview</a>
+          <a href="{{ config.extra.embedded_base }}/quick-start/index.html"{% if current_path == "/quick-start/" %} aria-current="page"{% endif %}>Quick Start</a>
+          <a href="{{ config.extra.embedded_base }}/workspaces/index.html"{% if current_path == "/workspaces/" %} aria-current="page"{% endif %}>Workspaces &amp; projects</a>
+          <a href="{{ config.extra.embedded_base }}/writing-rules/index.html"{% if current_path == "/writing-rules/" %} aria-current="page"{% endif %}>Writing rules</a>
+          <a href="{{ config.extra.embedded_base }}/compiling-and-scanning/index.html"{% if current_path == "/compiling-and-scanning/" %} aria-current="page"{% endif %}>Compiling &amp; scanning</a>
+          <a href="{{ config.extra.embedded_base }}/results-and-diagnostics/index.html"{% if current_path == "/results-and-diagnostics/" %} aria-current="page"{% endif %}>Results &amp; diagnostics</a>
+          <a href="{{ config.extra.embedded_base }}/preferences-and-cache/index.html"{% if current_path == "/preferences-and-cache/" %} aria-current="page"{% endif %}>Preferences &amp; cache</a>
+          <a href="{{ config.extra.embedded_base }}/reference/index.html"{% if current_path == "/reference/" %} aria-current="page"{% endif %}>Reference &amp; troubleshooting</a>
+        </nav>
+        <p class="offline-badge">Available offline</p>
+      </aside>
+      <main id="content" class="docs-content">
+        {% block content %}{% endblock content %}
+      </main>
+    </div>
+  </body>
+</html>

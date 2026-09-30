@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Quipu app-icon master. Derived from logo.svg: dark rounded tile + the
+     quipu mark recentered and scaled to fill the icon frame. tauri icon
+     rasterizes this to every platform size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <!-- Background tile: dark, rounded (macOS-friendly squircle-ish corner). -->
+  <rect x="0" y="0" width="100" height="100" rx="22" ry="22" fill="#23272e" />
+
+  <!-- Quipu mark: recentered to the frame and scaled up ~10%.
+       transform = translate(50,50) scale(1.1) translate(-50,-52.5)
+       (scales about the artwork's natural centre and pulls it to centre). -->
+  <g transform="translate(50,50) scale(1.1) translate(-50,-52.5)">
+    <!-- Top section cords (grey). Strokes thickened (~4->5, 3->4) so the cords
+         hold up at the 32px tray size. -->
+    <g fill="none" stroke="#8a9099" stroke-opacity="1">
+      <line x1="15" y1="20" x2="85" y2="20" stroke-width="5" stroke-linecap="round" />
+      <line x1="30" y1="20" x2="30" y2="85" stroke-width="4" stroke-linecap="round" />
+      <line x1="70" y1="20" x2="70" y2="85" stroke-width="4" stroke-linecap="round" />
+      <line x1="50" y1="20.06102" x2="50" y2="46.078022" stroke-width="4" stroke-linecap="round" />
+    </g>
+
+    <!-- Middle thread (green) -->
+    <line x1="50" y1="46.448433" x2="50" y2="77.92292" stroke="#77fb9d" stroke-width="4" />
+
+    <!-- Bottom cord (grey) -->
+    <line x1="50" y1="77.935928" x2="50" y2="84.787186" stroke="#8a9099" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Hexagonal data knots -->
+    <polygon points="30,35 36,38.5 36,45.5 30,49 24,45.5 24,38.5" fill="#9851c4" />
+    <polygon points="50,45 56,48.5 56,55.5 50,59 44,55.5 44,48.5" fill="#77fb9d" />
+    <polygon points="50,65 56,68.5 56,75.5 50,79 44,75.5 44,68.5" fill="#77fb9d" />
+    <polygon points="70,55 76,58.5 76,65.5 70,69 64,65.5 64,58.5" fill="#9851c4" />
+  </g>
+</svg>

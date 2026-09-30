@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 100 100"
+   width="500"
+   height="500"
+   version="1.1"
+   id="svg80"
+   sodipodi:docname="logo.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs84" />
+  <sodipodi:namedview
+     id="namedview82"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.7092281"
+     inkscape:cx="245.33715"
+     inkscape:cy="381.40057"
+     inkscape:window-width="1434"
+     inkscape:window-height="1205"
+     inkscape:window-x="2538"
+     inkscape:window-y="142"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg80" />
+  <!-- Main Spine Cord -->
+  <!-- Standard Vertical Cords (Left and Right) -->
+  <!-- Segmented Middle Vertical Cord -->
+  <!-- Top section (Grey) -->
+  <g
+     id="g3886"
+     style="fill:#6f7378;fill-opacity:0.82353574;stroke:#6f7378;stroke-opacity:1">
+    <line
+       x1="15"
+       y1="20"
+       x2="85"
+       y2="20"
+       stroke="#4A5568"
+       stroke-width="4"
+       stroke-linecap="round"
+       id="line60"
+       style="fill:#6f7378;fill-opacity:0.82353574;stroke:#6f7378;stroke-opacity:1" />
+    <line
+       x1="30"
+       y1="20"
+       x2="30"
+       y2="85"
+       stroke="#4A5568"
+       stroke-width="3"
+       stroke-linecap="round"
+       id="line62"
+       style="fill:#6f7378;fill-opacity:0.82353574;stroke:#6f7378;stroke-opacity:1" />
+    <line
+       x1="70"
+       y1="20"
+       x2="70"
+       y2="85"
+       stroke="#4A5568"
+       stroke-width="3"
+       stroke-linecap="round"
+       id="line64"
+       style="fill:#6f7378;fill-opacity:0.82353574;stroke:#6f7378;stroke-opacity:1" />
+    <line
+       x1="50"
+       y1="20.06102"
+       x2="50"
+       y2="46.078022"
+       stroke="#4a5568"
+       stroke-width="3"
+       stroke-linecap="round"
+       id="line66"
+       style="fill:#6f7378;fill-opacity:0.82353574;stroke:#6f7378;stroke-opacity:1" />
+  </g>
+  <!-- Middle section (The actual thread is now Blue, connecting the logic) -->
+  <line
+     x1="50"
+     y1="46.448433"
+     x2="50"
+     y2="77.92292"
+     stroke="#00d2ff"
+     stroke-width="2.93327"
+     id="line68"
+     style="stroke:#77fb9d;stroke-opacity:1" />
+  <!-- Bottom section (Grey) -->
+  <line
+     x1="50"
+     y1="77.935928"
+     x2="50"
+     y2="84.787186"
+     stroke="#4a5568"
+     stroke-width="3"
+     stroke-linecap="round"
+     id="line70"
+     style="fill:#9851c4;fill-opacity:1;stroke:#6f7378;stroke-opacity:1" />
+  <!-- Hexagonal Data Knots -->
+  <!-- Cord 1 Node (Standalone Match) -->
+  <polygon
+     points="30,35 36,38.5 36,45.5 30,49 24,45.5 24,38.5"
+     fill="#FF6B6B"
+     id="polygon72"
+     style="fill:#9851c4;fill-opacity:1" />
+  <!-- Cord 2 Nodes (Opaque fills perfectly mask the blue thread joints) -->
+  <polygon
+     points="50,45 56,48.5 56,55.5 50,59 44,55.5 44,48.5"
+     fill="#00D2FF"
+     id="polygon74"
+     style="fill:#77fb9d;fill-opacity:1" />
+  <polygon
+     points="50,65 56,68.5 56,75.5 50,79 44,75.5 44,68.5"
+     fill="#00D2FF"
+     id="polygon76"
+     style="fill:#77fb9d;fill-opacity:1" />
+  <!-- Cord 3 Node (Standalone Match) -->
+  <polygon
+     points="70,55 76,58.5 76,65.5 70,69 64,65.5 64,58.5"
+     fill="#FF6B6B"
+     id="polygon78"
+     style="fill:#9851c4;fill-opacity:1" />
+</svg>

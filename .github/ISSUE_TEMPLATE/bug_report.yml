@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible problem in Quipu.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not include private rules, customer
+        data, credentials, live malware, or other sensitive material.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Quipu version
+      description: Find this under Help → About.
+      placeholder: 0.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: system
+    attributes:
+      label: Linux distribution and version
+      placeholder: Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Installation method
+      options:
+        - AppImage
+        - DEB
+        - RPM
+        - Built from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Choose …
+        3. Observe …
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove private paths, rule content, target data, and secrets before attaching anything.

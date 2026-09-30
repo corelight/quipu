@@ -1,0 +1,17 @@
+# Quipu project manifest, schema 1.
+#
+# Two independent entrypoints. Declaring them means Quipu compiles both, in this
+# order, and treats the files under parts/ as library sources rather than as
+# entrypoints of their own.
+schema = 1
+
+# The compile order, preserved rather than sorted: documents.yar sorts first by
+# path but is compiled second. Reorder this list and press Refresh to see the
+# Includes view follow.
+entrypoints = [
+    "scripts.yar",
+    "documents.yar",
+]
+
+# include_dirs is left out, so it defaults to the project root - which is all
+# either entrypoint needs to resolve its own "parts/..." include.

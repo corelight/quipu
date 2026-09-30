@@ -1,0 +1,24 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-confirm",
+    "core:path:default",
+    "core:event:default",
+    "core:webview:allow-set-webview-zoom",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://corelight.com/platform/yara-file-analysis" },
+        { "url": "https://virustotal.github.io/yara-x/" },
+        { "url": "https://github.com/corelight/quipu/issues/new/choose" }
+      ]
+    }
+  ]
+}

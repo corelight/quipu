@@ -1,0 +1,40 @@
+{
+  "name": "quipu",
+  "private": true,
+  "version": "0.2.0",
+  "description": "A desktop workbench for writing, validating, compiling, and testing YARA rules.",
+  "license": "BSD-3-Clause",
+  "homepage": "https://github.com/corelight/quipu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/corelight/quipu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/corelight/quipu/issues"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "type": "module",
+  "scripts": {
+    "docs:build": "zola --root ../documentation build --force --output-dir ../app/generated/docs && node scripts/check-generated-docs.mjs",
+    "licenses:generate": "node scripts/generate-third-party-licenses.mjs",
+    "dev": "npm run docs:build && vite",
+    "build": "npm run docs:build && tsc && vite build",
+    "test": "node --experimental-strip-types --test src/*.test.mjs",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "monaco-editor": "^0.52.2",
+    "vscode-jsonrpc": "^9.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "typescript": "^5.6",
+    "vite": "^6"
+  }
+}

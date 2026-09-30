@@ -1,0 +1,60 @@
+name: Dependency security
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Audit production dependencies
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit development dependencies
+        working-directory: app
+        run: npm audit --audit-level=high
+
+  cargo-audit:
+    name: RustSec audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2
+        with:
+          tool: cargo-audit@0.22.2
+
+      - name: Audit Rust dependencies
+        working-directory: app/src-tauri
+        # Each exception is justified and assigned a removal condition in
+        # docs/dependency-security.md. Keep this list and that document in sync.
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2023-0071 \
+            --ignore RUSTSEC-2024-0429 \
+            --ignore RUSTSEC-2026-0194 \
+            --ignore RUSTSEC-2026-0195 \
+            --ignore RUSTSEC-2026-0222 \
+            --ignore RUSTSEC-2026-0269 \
+            --ignore RUSTSEC-2026-0316

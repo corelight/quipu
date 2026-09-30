@@ -1,0 +1,14 @@
+# Quipu project manifest, schema 1.
+#
+# One declared entrypoint and one include directory. Declaring the entrypoint
+# means Quipu compiles from main.yar rather than guessing, and it means the two
+# files under shared/ are library sources rather than projects of their own.
+schema = 1
+
+# Compiled in this order. Every other rule file is reached through an include.
+entrypoints = ["main.yar"]
+
+# Searched after the directory of the file that wrote the include. main.yar
+# spells "shared/base.yar" explicitly because the embedded language server does
+# not currently resolve this example through `include_dirs` alone.
+include_dirs = ["shared"]

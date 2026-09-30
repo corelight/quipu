@@ -1,0 +1,40 @@
+# Rust / Cargo build output
+/app/src-tauri/target/
+target/
+
+# Node / frontend
+/app/node_modules/
+/app/dist/
+/app/generated/
+/dist/
+# Stray tsc output (we set noEmit; Vite compiles .ts). Never commit src/*.js.
+/app/src/**/*.js
+
+# Tauri generated (schemas/capabilities are regenerated at build)
+/app/src-tauri/gen/
+
+# Python bytecode (test/ui harness)
+__pycache__/
+*.pyc
+
+# OS / editor cruft
+.DS_Store
+*.swp
+/.agents/
+/.claude/
+/.codex/
+/.idea/
+
+# Local environment files can contain credentials or private paths
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Release packages are produced by GitHub Actions, never stored in Git
+/releases/
+*.AppImage
+*.deb
+*.rpm
