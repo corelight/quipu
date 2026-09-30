@@ -1,0 +1,12 @@
+Incident note, typed up by hand from two tickets that turned out to be one.
+
+The document that started it carried a macro entry point:
+
+    Sub AutoOpen()
+
+and the launcher it wrote to disk began with:
+
+    #!/bin/sh
+
+Both lines are quoted here as plain text. Nothing in this file is executable,
+and there is no document attached to it - it is a description of one.

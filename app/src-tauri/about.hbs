@@ -1,0 +1,19 @@
+Quipu third-party Rust software notices
+========================================
+
+This file lists license notices for Rust crates incorporated into Quipu's
+release binary. It is generated from app/src-tauri/Cargo.lock by cargo-about.
+The notices below do not change the licensing terms of Quipu itself.
+
+{{#each licenses}}
+-------------------------------------------------------------------------------
+{{name}} ({{id}})
+
+Used by:
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} — {{crate.repository}}{{/if}}
+{{/each}}
+
+{{{text}}}
+
+{{/each}}

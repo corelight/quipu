@@ -1,0 +1,166 @@
+name: Linux release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  YRX_REGENERATE_MODULES_RS: "false"
+
+jobs:
+  build:
+    name: Build Linux x86-64 packages
+    # Build on the oldest GitHub-hosted Ubuntu image we support so the binary
+    # does not acquire an unnecessarily new glibc requirement.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@8d8cc9a8e0d47b64af669de71110e76860d6afbd # 1.91.0
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install Zola
+        uses: taiki-e/install-action@26e9283f268b880168bdbd2c545dfcd60ec2c6ab # v2
+        with:
+          tool: zola@0.23.0
+
+      - name: Install native build and package dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            desktop-file-utils \
+            cpio \
+            file \
+            libayatana-appindicator3-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            rpm
+
+      - name: Check tag and application versions
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          app_version="$(node -p "require('./app/package.json').version")"
+          test "${GITHUB_REF_NAME}" = "v${app_version}"
+
+      - name: Install JavaScript dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build AppImage, DEB, and RPM
+        working-directory: app
+        run: npm run tauri -- build --bundles appimage,deb,rpm
+
+      - name: Validate package contents
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          bundle_root=app/src-tauri/target/release/bundle
+          app_root="${bundle_root}/appimage/Quipu.AppDir"
+          deb_packages=("${bundle_root}"/deb/*.deb)
+          rpm_packages=("${bundle_root}"/rpm/*.rpm)
+          test "${#deb_packages[@]}" -eq 1
+          test "${#rpm_packages[@]}" -eq 1
+
+          validation_root="$(mktemp -d)"
+          mkdir "${validation_root}/deb" "${validation_root}/rpm"
+          dpkg-deb --extract "${deb_packages[0]}" "${validation_root}/deb"
+          (
+            cd "${validation_root}/rpm"
+            cpio --extract --make-directories --quiet \
+              < <(rpm2cpio "${rpm_packages[0]}")
+          )
+
+          cmp LICENSE "${app_root}/usr/lib/Quipu/LICENSE"
+          cmp THIRD_PARTY_LICENSES/NPM.txt \
+            "${app_root}/usr/lib/Quipu/THIRD_PARTY_LICENSES/NPM.txt"
+          cmp THIRD_PARTY_LICENSES/RUST.txt \
+            "${app_root}/usr/lib/Quipu/THIRD_PARTY_LICENSES/RUST.txt"
+
+          cmp LICENSE "${validation_root}/deb/usr/share/doc/quipu/copyright"
+          cmp THIRD_PARTY_LICENSES/NPM.txt \
+            "${validation_root}/deb/usr/share/doc/quipu/THIRD_PARTY_LICENSES_NPM.txt"
+          cmp THIRD_PARTY_LICENSES/RUST.txt \
+            "${validation_root}/deb/usr/share/doc/quipu/THIRD_PARTY_LICENSES_RUST.txt"
+
+          cmp LICENSE "${validation_root}/rpm/usr/share/licenses/quipu/LICENSE"
+          cmp THIRD_PARTY_LICENSES/NPM.txt \
+            "${validation_root}/rpm/usr/share/licenses/quipu/THIRD_PARTY_LICENSES_NPM.txt"
+          cmp THIRD_PARTY_LICENSES/RUST.txt \
+            "${validation_root}/rpm/usr/share/licenses/quipu/THIRD_PARTY_LICENSES_RUST.txt"
+
+          desktop-file-validate \
+            "${app_root}/usr/share/applications/Quipu.desktop"
+          desktop-file-validate \
+            "${validation_root}/deb/usr/share/applications/Quipu.desktop"
+          desktop-file-validate \
+            "${validation_root}/rpm/usr/share/applications/Quipu.desktop"
+
+          for binary in \
+            "${app_root}/usr/bin/quipu" \
+            "${validation_root}/deb/usr/bin/quipu" \
+            "${validation_root}/rpm/usr/bin/quipu"
+          do
+            test -x "${binary}"
+            if ldd "${binary}" | grep -F 'not found'; then
+              exit 1
+            fi
+          done
+
+      - name: Collect packages and checksums
+        run: |
+          mkdir dist
+          cp app/src-tauri/target/release/bundle/appimage/*.AppImage dist/
+          cp app/src-tauri/target/release/bundle/deb/*.deb dist/
+          cp app/src-tauri/target/release/bundle/rpm/*.rpm dist/
+          cd dist
+          sha256sum -- * > SHA256SUMS
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: quipu-linux-x86_64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: quipu-linux-x86_64
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --generate-notes

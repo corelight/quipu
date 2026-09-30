@@ -1,0 +1,592 @@
+:root {
+  --bg: #1e1e1e;
+  --panel: #252526;
+  --border: #3c3c3c;
+  --fg: #d4d4d4;
+  --muted: #858585;
+  --accent: #0e639c;
+  /* Lighter than --accent, which is a fill colour and too dark to read as text
+     on --panel. */
+  --link: #4daafc;
+  --error: #f48771;
+  --warning: #cca700;
+  --ok: #89d185;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  height: 100vh;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* Columns: explorer | splitter | editor (flex) | results-splitter | results.
+   The editor's 1fr absorbs extra window width. The results column is 0 when
+   collapsed (its splitter stays so the chevron remains reachable) and
+   --results-width when open. */
+main {
+  --explorer-width: 220px;
+  --results-width: 360px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--explorer-width) 6px 1fr 6px 0;
+  flex: 1;
+  min-height: 0;
+}
+main.results-open { grid-template-columns: var(--explorer-width) 6px 1fr 6px var(--results-width); }
+
+/* View > Explorer hidden. Collapsing the first two columns to 0 (rather than
+   removing the elements) keeps --explorer-width intact, so re-showing the
+   explorer restores whatever width the splitter was last dragged to. */
+main.explorer-hidden { grid-template-columns: 0 0 1fr 6px 0; }
+main.explorer-hidden.results-open { grid-template-columns: 0 0 1fr 6px var(--results-width); }
+/* Zero-width + clipped, NOT display:none: a display:none grid item is skipped
+   by auto-placement, which would slide every later pane two columns to the
+   left and leave the editor in the 0-width first track. visibility:hidden also
+   takes them out of tab order and stops the splitter accepting a drag. */
+main.explorer-hidden > .explorer,
+main.explorer-hidden > #splitter {
+  visibility: hidden;
+  overflow: hidden;
+  padding: 0;
+  border: none;
+}
+/* The editor pane's left border is the explorer divider; without the explorer
+   it would float against the window edge. */
+main.explorer-hidden > .editor-pane { border-left: none; }
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.editor-pane { border-left: 1px solid var(--border); }
+.results-pane.collapsed { display: none; }
+/* The active tab-panel scrolls, not the pane itself. */
+.results-pane { overflow: hidden; }
+
+/* Splitter handles. */
+.splitter {
+  position: relative;
+  cursor: col-resize;
+  background: transparent;
+  border-right: 1px solid var(--border);
+}
+.splitter:hover { background: var(--accent); }
+/* When results are collapsed the divider can't resize; show a plain pointer. */
+main:not(.results-open) .results-splitter { cursor: pointer; }
+
+/* Vertical expand/collapse chevron centered in the results splitter. */
+.chevron {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.pane-head { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+h2 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 8px 0; }
+
+/* Compile/scan build-status line - the primary state signal. */
+.build-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 4px 0 6px;
+  border-left: 3px solid var(--border);
+}
+.build-status.not-compiled { color: var(--muted); }
+.build-status.compiling { color: var(--warning); border-left-color: var(--warning); }
+.build-status.compiled { color: var(--ok); border-left-color: var(--ok); }
+.build-status.stale { color: var(--warning); border-left-color: var(--warning); background: rgba(204,167,0,0.08); }
+
+/* Results tabs */
+.tab-bar { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-top: 8px; }
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.tab:hover { color: var(--fg); }
+.tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+.tab-count {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 10px;
+  margin-left: 4px;
+}
+.tab-panel { display: none; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.tab-panel.active { display: block; }
+
+.actions { display: flex; gap: 6px; }
+
+/* Resolving a conflict for the active document. Only offered when there is one,
+   and hidden rather than disabled: a permanently greyed-out button beside Save
+   would suggest reloading is something the user could normally do. */
+#reload-disk { border-color: var(--error); color: var(--error); }
+#reload-disk.hidden { display: none; }
+
+button {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); }
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+button.primary:disabled { background: var(--panel); border-color: var(--border); }
+
+textarea {
+  width: 100%;
+  background: #1a1a1a;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+#rule {
+  flex: 1;
+  min-height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+#target { min-height: 80px; }
+textarea:disabled { opacity: 0.5; }
+
+/* Explorer */
+.explorer { padding-right: 8px; }
+.explorer-head { margin-top: 8px; }
+.explorer-head h2 { margin: 0 0 6px; }
+.explorer-head .actions { display: flex; gap: 6px; }
+.explorer-head .actions .icon-btn { flex: 1; padding: 3px 6px; font-size: 12px; }
+#dir-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+/* One line about the project as a whole: how many files, and anything the user
+   needs to know about the snapshot they are looking at. */
+.project-status { font-size: 11px; color: var(--muted); margin: 4px 0 0; overflow-wrap: anywhere; }
+.project-status.empty { display: none; }
+.project-status.stale { color: var(--warning); }
+.project-status.bad { color: var(--error); }
+
+/* The explorer's Files/Includes tabs. Deliberately NOT the results pane's .tab:
+   showTab() there selects `.tab` document-wide, so sharing the class would have
+   the two tab bars switch each other. */
+.explorer-tabs { align-items: center; }
+.explorer-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.explorer-tab:hover { color: var(--fg); }
+.explorer-tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+/* Pushed to the far end of the tab bar: it acts on the project, not on a view. */
+.explorer-tabs .refresh { margin-left: auto; padding: 2px 6px; font-size: 11px; }
+
+.explorer-view { display: none; margin-top: 6px; }
+.explorer-view.active { display: block; }
+
+/* The Files and Includes trees. Nesting is real nesting - a <details> per
+   expandable node - so indentation comes from the structure rather than from a
+   depth multiplied into a padding. */
+.tree { font-size: 13px; }
+.tree details > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  list-style: none;
+}
+.tree details > summary::-webkit-details-marker { display: none; }
+/* Our own twisty, since the native marker is hidden. */
+.tree details > summary::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.1s;
+}
+.tree details[open] > summary::before { transform: rotate(90deg); }
+.tree details > summary:hover { background: var(--panel); }
+.tree .children { margin-left: 9px; padding-left: 5px; border-left: 1px solid var(--border); }
+.folder-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-count { color: var(--muted); font-size: 10px; margin-left: 4px; }
+.hint { color: var(--muted); font-size: 11px; margin: 0 0 4px; }
+
+/* A row is one clickable thing: a file, a source, an issue. Buttons rather than
+   divs, so they are focusable and Enter-activated without any ARIA. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--fg);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+button.row:hover:not(:disabled) { background: var(--panel); }
+.row.active { background: var(--accent); }
+.row.unreadable .file-name { text-decoration: line-through; }
+.file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dirty-dot { color: var(--warning); font-size: 11px; margin-left: auto; }
+.row.active .dirty-dot { color: #fff; }
+
+/* A file that changed on disk under an open document. Beside the dirty dot, not
+   instead of it: whichever comes first takes the auto margin, so the pair sits at
+   the end of the row in the same place a lone dot does. */
+.conflict-mark { color: var(--error); font-size: 11px; margin-left: auto; }
+.row.active .conflict-mark { color: #fff; }
+
+/* An include directive and, when it resolves, the source it names. */
+.row.include { flex-wrap: wrap; cursor: default; }
+.include-directive {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--link);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+.include-directive:hover { text-decoration: underline; }
+.row.include.unresolved .include-directive { color: var(--error); }
+.row.include.cycle .include-directive { color: var(--warning); }
+.include-arrow { color: var(--muted); flex-shrink: 0; }
+/* The target sits inline after the arrow rather than filling the row. */
+.row.include .row.source { width: auto; flex: 0 1 auto; padding: 0 4px; }
+
+.row.issue { flex-direction: column; align-items: flex-start; gap: 2px; font-size: 12px; }
+.row.issue.bad { border-left: 3px solid var(--error); }
+.row.issue.info { border-left: 3px solid var(--border); }
+.issue-msg { overflow-wrap: anywhere; }
+.issue-meta { display: flex; gap: 6px; align-items: baseline; color: var(--muted); font-size: 10px; }
+.issue-at { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.includes-head { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.includes-section { margin-bottom: 10px; }
+.includes-section h3 {
+  margin: 6px 0 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Small labels: entrypoint, external, unreadable, an issue's severity. */
+.chip {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 10px;
+}
+.chip.info { color: var(--link); border-color: var(--link); }
+.chip.warn { color: var(--warning); border-color: var(--warning); }
+.chip.bad { color: var(--error); border-color: var(--error); }
+
+.muted { color: var(--muted); font-size: 12px; margin: 8px 0; }
+.muted.subtle { margin-top: 4px; opacity: 0.8; overflow-wrap: anywhere; }
+.ok { color: var(--ok); font-size: 13px; margin: 8px 0; }
+
+/* Two-line layout: the message gets a full-width line of its own, and a
+   metadata line (badge/code/file/loc) sits below. This avoids the flexbox
+   starvation where a long file chip squeezed .msg to ~1 char and it wrapped
+   vertically one letter per line. */
+.diag {
+  padding: 4px 8px;
+  border-left: 3px solid;
+  margin-bottom: 4px;
+  font-size: 12px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.diag:hover { background: #2d2d2e; }
+.diag.error { border-color: var(--error); }
+.diag.warning { border-color: var(--warning); }
+.diag .msg { display: block; overflow-wrap: anywhere; }
+.diag-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.badge { text-transform: uppercase; flex-shrink: 0; }
+.diag.error .badge { color: var(--error); }
+.diag.warning .badge { color: var(--warning); }
+.code { flex-shrink: 0; }
+/* File chip can be a long path; ellipsize it and let it take the slack so
+   the loc stays put. */
+.diag-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+.loc { flex-shrink: 0; white-space: nowrap; }
+
+/* Results tree: rule > pattern > match */
+.rule-node { border: 1px solid var(--border); border-radius: 4px; margin: 8px 0; }
+.rule-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.rule-head:hover { background: var(--panel); }
+.twisty {
+  width: 0; height: 0;
+  border-left: 5px solid var(--muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+}
+.rule-node.expanded .twisty { transform: rotate(90deg); }
+.twisty { cursor: pointer; padding: 2px; }
+.rule-name { cursor: pointer; }
+.rule-name:hover { text-decoration: underline; color: var(--accent); }
+.ns { color: var(--muted); font-size: 11px; }
+.tag { background: var(--accent); border-radius: 3px; padding: 0 6px; font-size: 11px; }
+.count { color: var(--muted); font-size: 11px; margin-left: auto; }
+
+.match-list-tree { display: none; padding: 0 8px 6px 22px; }
+.rule-node.expanded .match-list-tree { display: block; }
+.match-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.match-row:hover { background: var(--panel); }
+.match-row.selected { background: var(--accent); }
+.match-row .pat { color: var(--fg); cursor: pointer; }
+.match-row .pat:hover { text-decoration: underline; color: var(--accent); }
+.match-row .off { color: var(--ok); }
+.match-row .len { color: var(--muted); }
+
+/* Full-width hex/context dock along the bottom. */
+.hex-dock {
+  border-top: 1px solid var(--border);
+  background: #1a1a1a;
+  max-height: 38vh;
+  display: flex;
+  flex-direction: column;
+}
+.hex-dock.hidden { display: none; }
+.hex-dock-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.hex-title { font-family: ui-monospace, monospace; font-size: 12px; color: var(--fg); }
+.hex-body {
+  overflow: auto;
+  padding: 8px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre;
+}
+.hex-row { display: flex; gap: 16px; }
+.hex-off { color: var(--muted); flex-shrink: 0; }
+.hex-bytes { color: var(--fg); }
+.hex-ascii { color: var(--muted); }
+.hb.hit, .ac.hit { background: var(--warning); color: #1a1a1a; border-radius: 1px; }
+.hb.pad, .ac.pad { opacity: 0; }
+
+/* Help > About Quipu. A native <dialog> for free Escape-to-close and focus
+   trapping; the styling brings it in line with the rest of the dark UI, since
+   the UA default is a white box. */
+.about-dialog {
+  min-width: 340px;
+  max-width: 420px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+}
+.about-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.about-head { display: flex; gap: 14px; align-items: center; }
+.about-icon { flex-shrink: 0; }
+.about-name { font-size: 20px; text-transform: none; color: var(--fg); margin: 0; }
+.about-version { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+.about-desc { font-size: 13px; line-height: 1.5; margin: 16px 0 0; }
+.about-powered { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+/* The UA default link blue (#0000EE) is close to unreadable on --panel. */
+.about-dialog a {
+  color: var(--link);
+  text-decoration: none;
+}
+.about-dialog a:hover { text-decoration: underline; }
+/* Links are tab-focusable, so they need a focus ring that survives the dark
+   background; :focus-visible keeps it off pointer clicks. */
+.about-dialog a:focus-visible {
+  outline: 1px solid var(--link);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.about-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+/* File > Preferences. Kept as its own modal shape: this one is a form and
+   status surface rather than the fixed About content. */
+.preferences-dialog {
+  width: min(560px, calc(100vw - 48px));
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+}
+.preferences-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.preferences-title {
+  margin: 0 0 16px;
+  color: var(--fg);
+  font-size: 20px;
+  text-transform: none;
+}
+.preferences-section {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.preferences-section h2 {
+  margin: 0 0 14px;
+  color: var(--fg);
+  font-size: 14px;
+  text-transform: none;
+}
+.preferences-check,
+.preferences-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.preferences-size { justify-content: space-between; }
+.preferences-size input { width: 120px; }
+.preferences-values { margin: 16px 0 0; font-size: 12px; }
+.preferences-values div {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 12px;
+  margin: 7px 0;
+}
+.preferences-values dt { color: var(--muted); }
+.preferences-values dd { margin: 0; text-align: right; }
+.cache-location { width: 100%; box-sizing: border-box; }
+.preferences-warning,
+.preferences-error {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.preferences-warning { border: 1px solid var(--warning); }
+.preferences-error { border: 1px solid var(--error); color: var(--error); }
+.preferences-warning.hidden,
+.preferences-error.hidden { display: none; }
+.preferences-cache-actions,
+.preferences-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* File > Open Example…. Another native <dialog>, styled to match the About box
+   rather than sharing its class: the two have different shapes (a list of choices
+   against a fixed panel) and one stylesheet block each is clearer than a set of
+   overrides. */
+.example-dialog {
+  min-width: 420px;
+  max-width: 560px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+}
+.example-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.examples-title { font-size: 18px; text-transform: none; color: var(--fg); margin: 0; }
+.examples-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
+.examples-error {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--error);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg);
+}
+.examples-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.examples-loading { color: var(--muted); font-size: 12px; }
+.example {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.example-text { min-width: 0; }
+.example-name { font-size: 13px; text-transform: none; color: var(--fg); margin: 0; }
+.example-desc { color: var(--muted); font-size: 12px; line-height: 1.4; margin: 4px 0 0; }
+.example button { flex-shrink: 0; }
+.examples-actions { display: flex; justify-content: flex-end; margin-top: 20px; }

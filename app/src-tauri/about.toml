@@ -1,0 +1,31 @@
+# Licenses permitted in Quipu's resolved Rust dependency graph. cargo-about
+# fails when a dependency falls outside this reviewed set.
+accepted = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# The initial release artifacts are Linux x86-64 only. Add future shipping
+# targets here before producing their license inventories.
+targets = ["x86_64-unknown-linux-gnu"]
+
+# Quipu's own license is distributed separately as LICENSE; this inventory is
+# specifically for software incorporated from third parties.
+private = { ignore = true }
+
+# Build scripts and test-only crates are not incorporated into release
+# packages. They remain governed by their upstream licenses, but are excluded
+# from the redistributable runtime notice.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true

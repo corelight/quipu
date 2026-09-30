@@ -1,0 +1,5 @@
+Ordinary note, kept beside the other target so there is something to compare.
+
+The build finished, the tests passed, and the release notes are written up.
+Nothing here resembles either example rule, so scanning this file reports no
+matches at all.

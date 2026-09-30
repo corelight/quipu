@@ -1,0 +1,6 @@
+[env]
+# YARA-X's release sources already contain generated module bindings. Re-running
+# that upstream generation would require protoc and mutate Cargo's git checkout.
+# An explicitly supplied environment value still takes precedence when a YARA-X
+# maintainer intentionally needs to regenerate them.
+YRX_REGENERATE_MODULES_RS = "false"

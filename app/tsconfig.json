@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // Modules under test are imported directly by the .mjs test files, which run
+    // on Node's ESM resolver: it does not guess extensions, so a tested module's
+    // own runtime imports have to spell `./sourceid.ts` in full. Vite resolves
+    // those as written, and nothing is emitted from here, so allowing the
+    // extension costs nothing and keeps one spelling working everywhere.
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src"]
+}

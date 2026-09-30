@@ -1,0 +1,16 @@
+base_url = "https://docs.quipu.invalid"
+title = "Quipu Documentation"
+description = "Offline documentation bundled with Quipu"
+compile_sass = false
+build_search_index = false
+generate_feeds = false
+minify_html = false
+
+[markdown]
+smart_punctuation = true
+external_links_target_blank = false
+
+[extra]
+# Tauri's application origin is platform-dependent. Templates therefore use
+# this root-relative mount point instead of Zola's absolute base_url.
+embedded_base = "/docs"

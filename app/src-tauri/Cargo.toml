@@ -1,0 +1,91 @@
+[package]
+name = "quipu"
+# The authoritative app version lives in app/package.json; tauri.conf.json reads
+# it from there for artifact naming. This crate version is not the app version
+# and is intentionally pinned (it only appears in Rust crate metadata).
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.91"
+authors = ["Corelight, Inc."]
+description = "A desktop workbench for writing, validating, compiling, and testing YARA rules."
+license = "BSD-3-Clause"
+homepage = "https://github.com/corelight/quipu"
+repository = "https://github.com/corelight/quipu"
+publish = false
+
+[lib]
+name = "quipu_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+# YARA-X is pulled directly from the upstream git repo, pinned to a release
+# tag. (yara-x-ls — the language server we embed — is not published to
+# crates.io, so a git dependency is the only way to get it; we pin the lib to
+# the same tag for consistency.) Cargo fetches + locks this; no sibling checkout.
+yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.19.0" }
+
+# The project model parses `include` directives with YARA-X's own parser, so
+# Quipu's include graph cannot drift from what the compiler accepts. Same repo
+# and tag as yara-x/yara-x-ls; Cargo resolves all three to one checkout.
+yara-x-parser = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.19.0" }
+
+# Same minimal feature set proven in crates/yexer (Phase 0):
+# magic-module OFF (libmagic), native-code-serialization OFF (portable .yarc).
+yara-x = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.19.0", default-features = false, features = [
+    "constant-folding",
+    "exact-atoms",
+    "fast-regexp",
+    "generate-proto-code",
+    "pe-module",
+    "elf-module",
+    "macho-module",
+    "dotnet-module",
+    "dex-module",
+    "lnk-module",
+    "hash-module",
+    "math-module",
+    "string-module",
+    "time-module",
+    "console-module",
+] }
+tauri-plugin-opener = "2.5.4"
+# Project model (see src/project/): `quipu.toml` manifests and exclusion globs.
+toml = "1"
+globset = "0.4"
+# Canonical source and compiled-artifact fingerprints.
+blake3 = "1"
+# Cross-process advisory locks for cache/config structural operations.
+fs2 = "0.4"
+# 128-bit artifact generation tokens from the operating system RNG.
+getrandom = "0.3"
+# Native filesystem watching (see src/watch/), used directly rather than through
+# the Tauri filesystem plugin: Quipu needs one managed watcher over a watch plan
+# the backend derives, not a general filesystem surface exposed to the webview.
+# default-features off drops crossbeam-channel, which the callback API does not
+# need; macos_fsevent is kept because it is notify's macOS backend.
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+
+# Renaming a rule file, and installing an example's working copy, need an atomic
+# no-replace rename (`renameat2` with `RENAME_NOREPLACE` on Linux, `renamex_np`
+# with `RENAME_EXCL` on macOS); see src/fs.rs. rustix is already in the graph, and
+# wraps both without Quipu doing its own unsafe FFI. Only the platforms Quipu
+# ships on are listed: any other target gets an explicit refusal rather than a
+# rename that could replace someone's directory.
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+rustix = { version = "1", features = ["fs"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+# Project-model tests build throwaway project trees on disk.
+tempfile = "3"

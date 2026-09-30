@@ -1,0 +1,59 @@
+name: Dependency security
+
+on:
+  push:
+    paths:
+      - .github/workflows/security.yml
+      - app/package-lock.json
+      - app/src-tauri/Cargo.lock
+  pull_request:
+    paths:
+      - .github/workflows/security.yml
+      - app/package-lock.json
+      - app/src-tauri/Cargo.lock
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Audit production dependencies
+        working-directory: app
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit development dependencies
+        working-directory: app
+        run: npm audit --audit-level=high
+
+  cargo-audit:
+    name: RustSec audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # Tauri's current GTK 3 stack pins glib 0.18.5. Quipu and its resolved
+      # dependencies do not use the affected VariantStrIter API. See the
+      # documented, temporary exception in docs/dependency-security.md.
+      - name: Audit Rust dependencies
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: app/src-tauri
+          ignore: RUSTSEC-2024-0429

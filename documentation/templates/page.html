@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} — {{ config.title }}{% endblock title %}
+
+{% block content %}
+  <article>
+    <p class="breadcrumb"><a href="{{ config.extra.embedded_base }}/index.html">Documentation</a> /</p>
+    <h1>{{ page.title }}</h1>
+    {% if page.description %}<p class="lede">{{ page.description }}</p>{% endif %}
+    {{ page.content | safe }}
+  </article>
+{% endblock content %}

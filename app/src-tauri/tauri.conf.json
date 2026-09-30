@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Quipu",
+  "version": "../package.json",
+  "identifier": "com.corelight.quipu",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Quipu",
+        "width": 1200,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Corelight, Inc.",
+    "homepage": "https://github.com/corelight/quipu",
+    "copyright": "Copyright © 2026 Corelight, Inc.",
+    "license": "BSD-3-Clause",
+    "licenseFile": "../../LICENSE",
+    "category": "DeveloperTool",
+    "shortDescription": "A desktop workbench for YARA rules.",
+    "longDescription": "Quipu combines a YARA-aware editor, project explorer, YARA-X compiler, and focused scan results in one local desktop application.",
+    "resources": {
+      "../../LICENSE": "LICENSE",
+      "../../THIRD_PARTY_LICENSES": "THIRD_PARTY_LICENSES",
+      "../../examples": "examples"
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/doc/quipu/copyright": "../../LICENSE",
+          "/usr/share/doc/quipu/THIRD_PARTY_LICENSES_NPM.txt": "../../THIRD_PARTY_LICENSES/NPM.txt",
+          "/usr/share/doc/quipu/THIRD_PARTY_LICENSES_RUST.txt": "../../THIRD_PARTY_LICENSES/RUST.txt"
+        }
+      },
+      "rpm": {
+        "files": {
+          "/usr/share/licenses/quipu/LICENSE": "../../LICENSE",
+          "/usr/share/licenses/quipu/THIRD_PARTY_LICENSES_NPM.txt": "../../THIRD_PARTY_LICENSES/NPM.txt",
+          "/usr/share/licenses/quipu/THIRD_PARTY_LICENSES_RUST.txt": "../../THIRD_PARTY_LICENSES/RUST.txt"
+        }
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
