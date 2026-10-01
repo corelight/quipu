@@ -39,7 +39,7 @@ jobs:
       - name: Install Zola
         uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2
         with:
-          tool: zola@0.23.0
+          tool: zola@0.23.6
 
       - name: Check tag and application versions
         if: startsWith(github.ref, 'refs/tags/')
@@ -54,6 +54,10 @@ jobs:
       - name: Test frontend
         working-directory: app
         run: npm test
+
+      - name: Build frontend and offline documentation
+        working-directory: app
+        run: npm run build
 
       - name: Lint Rust
         working-directory: app/src-tauri

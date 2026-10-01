@@ -41,7 +41,7 @@ jobs:
       - name: Install Zola
         uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2
         with:
-          tool: zola@0.23.0
+          tool: zola@0.23.6
 
       - name: Install dependencies
         working-directory: app

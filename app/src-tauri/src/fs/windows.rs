@@ -28,9 +28,7 @@ use super::Saved;
 use crate::project::escaped;
 
 pub(crate) fn save(path: &Path, contents: &str, expect: Option<&str>) -> io::Result<Saved> {
-    save_with(path, contents, expect, &mut |file, bytes| {
-        overwrite(file, bytes)
-    })
+    save_with(path, contents, expect, &mut overwrite)
 }
 
 fn save_with(

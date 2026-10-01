@@ -103,7 +103,7 @@ Quipu currently targets Linux x86-64. A build needs:
 
 - Rust 1.93 or newer
 - Node.js 22.6 or newer
-- Zola 0.23
+- Zola 0.23.6
 - Git
 - the native libraries required by Tauri and WebKitGTK
 
