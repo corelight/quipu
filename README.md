@@ -19,7 +19,7 @@ server, so you do not need a separate YARA installation.
 
 > [!IMPORTANT]
 > Quipu is at MVP stage. The initial supported platform is 64-bit Linux;
-> Windows and macOS support will follow.
+> Windows x86-64 builds are experimental; macOS support will follow.
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
 
@@ -137,6 +137,9 @@ npm run tauri -- build --bundles appimage,deb,rpm
 Artifacts are written below `app/src-tauri/target/release/bundle/`. The first
 build can take a while because Cargo compiles YARA-X and its dependencies from
 source.
+
+Windows build setup, installer behavior, and filesystem limitations are described
+in [Windows development](docs/windows.md).
 
 ## Develop and test
 

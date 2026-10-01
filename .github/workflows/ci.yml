@@ -112,6 +112,10 @@ jobs:
           npm run licenses:generate
           git diff --exit-code -- ../THIRD_PARTY_LICENSES/
 
+  windows:
+    name: Windows x86-64
+    uses: ./.github/workflows/windows-build.yml
+
   harness:
     name: UI harness unit tests
     runs-on: ubuntu-24.04

@@ -663,7 +663,7 @@ Committing by rename has consequences, all of them the price of that guarantee: 
 
 That moment between the exchange and the restore is an interval like any other, and putting a version back has exactly the problem writing one had: something may write the file again in there, and a plain rename back would destroy that version to make room for one nobody asked to see. So the restore is an exchange as well, and what it hands back is what decides. If it is the replacement this save installed, nothing else wrote and the displaced version is home. If it is anything else, a competing version has been taken out of the way rather than overwritten: a second exchange puts it back, the displaced version stays in the temporary beside it, and the save fails with an error naming that file - the only recovery there is once two versions exist and one path. Which is what removing the temporary is conditional on, and the two sides of the save answer that differently because they are authorised differently. A **committed** save has just replaced exactly the bytes it was told to replace, compared at the instant of the swap, so the file it swapped through may go: the inode that goes with it is the one the save was authorised to replace, which is the hard-link consequence stated above rather than a second one. A **refused** save has no such authorisation, so what it removes has to be *shown* to be its own - and byte equality does not show that. The save still holds the file it wrote its replacement into, open, so the proof is that the temporary's name still resolves to that same file - device and inode, against the open handle - *and* that reading it back through that handle yields the replacement. A third party's atomic replacement carrying exactly the replacement's bytes fails the first half; an in-place write into Quipu's own file, which the exchange has just left at the path where anything may write to it, fails the second. Anything not proven is somebody else's, and stays on disk named in the error.
 
-Where the platform or the filesystem has no exchange there is no conditional replacement to fall back on, so a save over an existing version is not committed at all and fails saying so. Some FUSE and network filesystems reach that branch on Linux and macOS too, so it is not only other platforms. A comparison followed by a rename is precisely the unconditional clobber all of this exists to avoid: it would still be atomic for anything reading the path and would still destroy a version nobody had seen, which is the bug rather than a mitigation of it. Being unable to save is a disappointment; overwriting an unseen version is not recoverable. Re-creating a file the caller expects to be absent needs no exchange and is unaffected, because `create_new` carries its own refusal.
+On Unix, where the platform or the filesystem has no exchange there is no conditional replacement to fall back on, so a save over an existing version is not committed at all and fails saying so. Some FUSE and network filesystems reach that branch on Linux and macOS too, so it is not only other platforms. A comparison followed by a rename is precisely the unconditional clobber all of this exists to avoid: it would still be atomic for anything reading the path and would still destroy a version nobody had seen, which is the bug rather than a mitigation of it. Being unable to save is a disappointment; overwriting an unseen version is not recoverable. Re-creating a file the caller expects to be absent needs no exchange and is unaffected, because `create_new` carries its own refusal.
 
 ##### Every version, at every boundary
 
@@ -1098,3 +1098,26 @@ Deferred, in rough dependency order:
 
 - **Caching.** Hashing plans and storing compiled rules, per `docs/compiled-rules-cache-design.md`. Nothing in Phase 5 hashes anything, and the watcher's notices are not a cache-invalidation signal.
 - **Manifest authoring UI.** Nothing writes `quipu.toml`; it is hand-written and committed by the user.
+
+## Windows filesystem behavior
+
+Windows conditional saves use an exclusive read/write handle with sharing disabled
+from the version comparison through the final flush. An incompatible open handle
+causes Save to fail before changing bytes. The version read from that handle must
+match the caller's expected text; an absent expected file is refused, while a file
+expected to be absent is created with `CREATE_NEW`. Readers, writers, deletes and
+renames cannot open the existing file while the save owns the handle. Writable
+memory mappings that outlive their original handles are outside this guarantee.
+
+Before modifying an existing file, Quipu creates and flushes a recovery copy in
+the same directory, copying the original DACL before writing any bytes to it.
+The file is updated in place, so its identity, ACL and hard links are preserved.
+A write or flush failure triggers restoration through the still-exclusive handle.
+If restoration fails, the original stays in the recovery file and the error names
+it. A process crash can leave a partial rule and a `.NAME.quipuPID-N.tmp` recovery
+file; recovery is manual, and startup never deletes those files. This differs
+from the Unix exchange implementation's atomic visibility.
+
+Windows renames use `MoveFileExW` with flags zero: destination replacement and
+cross-volume copy/delete fallback are both disabled. The same operation installs
+example directories, so an existing directory is preserved even when empty.

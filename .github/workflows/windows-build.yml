@@ -1,0 +1,85 @@
+name: Windows build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  YRX_REGENERATE_MODULES_RS: "false"
+
+jobs:
+  build:
+    name: Test and package Windows x86-64
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@283fb51ee3c8a49cd7c8ff30102f3fcf3cfbe0e1 # 1.93.0
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install Zola
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2
+        with:
+          tool: zola@0.23.0
+
+      - name: Check tag and application versions
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $version = (Get-Content app/package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag does not match app version $version" }
+
+      - name: Install JavaScript dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: app
+        run: npm test
+
+      - name: Lint Rust
+        working-directory: app/src-tauri
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Test Rust
+        working-directory: app/src-tauri
+        run: cargo test --locked
+
+      - name: Build NSIS and MSI installers
+        working-directory: app
+        run: npm run tauri -- build --ci --target x86_64-pc-windows-msvc --bundles nsis,msi -- --locked
+
+      - name: Validate installer contents
+        run: ./app/scripts/validate-windows-packages.ps1
+
+      - name: Collect packages
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe dist/
+          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi dist/
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quipu-windows-x86_64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
