@@ -894,11 +894,31 @@ async fn store_project_observed(
     }
 
     match persistence {
-        ProjectPersistence::NotNeeded => {}
+        ProjectPersistence::NotNeeded => {
+            if let Some(trace) = trace {
+                trace.event(
+                    "cache_persistence",
+                    serde_json::json!({
+                        "stage": "prepare", "outcome": "not_needed",
+                    }),
+                );
+            }
+        }
         ProjectPersistence::Prepared(PrepareOutcome::Prepared(proposal)) => {
+            if let Some(trace) = trace {
+                trace.event(
+                    "cache_persistence",
+                    serde_json::json!({
+                        "stage": "prepare", "outcome": "prepared",
+                    }),
+                );
+            }
             let cache_for_commit = cache.clone();
-            match tauri::async_runtime::spawn_blocking(move || cache_for_commit.commit(proposal))
-                .await
+            let commit_trace = trace.cloned();
+            match tauri::async_runtime::spawn_blocking(move || {
+                cache_for_commit.commit_observed(proposal, commit_trace.as_ref())
+            })
+            .await
             {
                 Ok(outcome @ CommitOutcome::Committed)
                 | Ok(outcome @ CommitOutcome::Declined(_))
@@ -908,12 +928,31 @@ async fn store_project_observed(
                 | Ok(outcome @ CommitOutcome::Unavailable) => {
                     cache.record_commit_outcome(outcome);
                 }
-                Err(_) => cache.record_persistence_task_failure(),
+                Err(_) => {
+                    if let Some(trace) = trace {
+                        trace.event(
+                            "cache_persistence",
+                            serde_json::json!({
+                                "stage": "commit", "outcome": "task_failed",
+                            }),
+                        );
+                    }
+                    cache.record_persistence_task_failure();
+                }
             }
         }
         ProjectPersistence::Prepared(outcome @ PrepareOutcome::Declined(_))
         | ProjectPersistence::Prepared(outcome @ PrepareOutcome::ArtifactOverLimit)
         | ProjectPersistence::Prepared(outcome @ PrepareOutcome::Unavailable) => {
+            if let Some(trace) = trace {
+                // These variants carry only fixed outcome names; Prepared's
+                // artifact and diagnostics must never be formatted into traces.
+                trace.event_lazy("cache_persistence", || {
+                    serde_json::json!({
+                        "stage": "prepare", "outcome": format!("{outcome:?}"),
+                    })
+                });
+            }
             cache.record_prepare_outcome(&outcome);
         }
     }

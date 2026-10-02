@@ -736,6 +736,12 @@ Only one metadata-referenced generation is live per project/target. A failed com
 does not delete the last good entry; its fingerprint simply will not match changed
 sources.
 
+An I/O failure while inspecting metadata or hashing an artifact is not evidence
+of corruption. Maintenance leaves that entry untouched and reports incomplete
+maintenance, so a later lookup can retry. This includes Windows sharing violations
+when another process temporarily holds either file open exclusively. Proven
+corruption, missing artifacts and digest mismatches remain eligible for cleanup.
+
 Maintenance runs after commit, after lowering the limit, when Preferences refreshes
 usage, and once in the background at startup. With the global-exclusive lock held,
 and project locks taken in ID order, it:
@@ -896,6 +902,11 @@ mirrored to stdout. Release builds programmatically open the Inspector only in t
 mode. Without the exact argument the backend emits no trace records, evaluates no
 trace-only field producers, the bounded frontend startup buffer and document identity
 state are discarded, and the Inspector is not opened.
+
+`cache_persistence` records preparation and commit outcomes separately from compile
+success. They also report whether post-commit maintenance retained the active entry.
+Storage failures include a fixed operation label and, where available, a numeric
+OS error code; OS error text, project paths, source and diagnostic bodies are omitted.
 
 Tracing is observation only. Its sink is injectable in tests, frontend callbacks are
 contained, and backend records use a fixed-capacity non-blocking queue without

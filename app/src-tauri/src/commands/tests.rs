@@ -56,6 +56,48 @@ fn seed_project_cache(cache: &CacheManager, root: &std::path::Path) {
     );
 }
 
+#[test]
+fn compile_trace_reports_persistence_and_reuse() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", &rule("traced_cache"));
+    let cache = cache_for(&fixture);
+    let shared = new_shared_rules();
+    let (trace, lines) = crate::debug_trace::DebugTrace::captured();
+    for _ in 0..2 {
+        let result = tauri::async_runtime::block_on(store_project_observed(
+            &shared,
+            &cache,
+            fixture.root.clone(),
+            Some(&trace),
+        ))
+        .expect("compile command");
+        assert!(result.ok);
+    }
+    assert!(trace.flush());
+    let records: Vec<serde_json::Value> = lines
+        .lock()
+        .expect("trace")
+        .iter()
+        .map(|line| serde_json::from_str(line).expect("JSON trace"))
+        .collect();
+    for outcome in ["prepared", "Committed", "not_needed"] {
+        assert!(
+            records
+                .iter()
+                .any(|record| record["event"] == "cache_persistence"
+                    && record["fields"]["outcome"] == outcome),
+            "missing {outcome}"
+        );
+    }
+    assert!(
+        records
+            .iter()
+            .any(|record| record["event"] == "cache_persistence"
+                && record["fields"]["stage"] == "maintenance"
+                && record["fields"]["currentProjectCached"] == true)
+    );
+}
+
 fn restore_work(
     cache: &CacheManager,
     root: &std::path::Path,
