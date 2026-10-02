@@ -533,6 +533,46 @@ fn truncated_artifacts_are_rejected_before_deserialization() {
 }
 
 #[test]
+fn artifact_read_trace_distinguishes_missing_from_truncated_files() {
+    for missing in [true, false] {
+        let harness = Harness::new();
+        harness.commit();
+        let artifact = harness.artifact_path();
+        let declared = harness.metadata().artifact.bytes;
+        if missing {
+            std::fs::remove_file(&artifact).expect("remove artifact");
+        } else {
+            std::fs::write(&artifact, b"short").expect("truncate artifact");
+        }
+        let (trace, lines) = crate::debug_trace::DebugTrace::captured();
+        assert!(matches!(
+            harness.manager.load_observed(&harness.plan(), Some(&trace)),
+            LoadOutcome::Miss(MissReason::Corrupt)
+        ));
+        assert!(trace.flush());
+        let lines = lines.lock().expect("trace");
+        let record = lines
+            .iter()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("JSON"))
+            .find(|record| record["fields"]["stage"] == "artifact_metadata")
+            .expect("artifact inspection evidence");
+        if missing {
+            assert_eq!(record["fields"]["detail"]["reason"], "missing");
+            assert!(record["fields"]["detail"]["osCode"].is_number());
+        } else {
+            assert_eq!(record["fields"]["detail"]["isRegular"], true);
+            assert_eq!(record["fields"]["detail"]["actualBytes"], 5);
+            assert_eq!(record["fields"]["detail"]["declaredBytes"], declared);
+        }
+        assert!(
+            !lines
+                .join("\n")
+                .contains(&artifact.to_string_lossy().into_owned())
+        );
+    }
+}
+
+#[test]
 fn excessive_declared_artifact_size_is_rejected_before_hash_or_deserialization() {
     let harness = Harness::new();
     let plan = harness.plan();

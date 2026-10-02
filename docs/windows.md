@@ -50,6 +50,21 @@ upgrades recognise the existing installation.
 
 ## Saving and filesystem behavior
 
+Compiled YARA rules contain detection patterns that Windows Defender can flag.
+If a cache disappears after compilation or at startup, check Windows Security's
+Protection history for the `rules-*.yarc` file. Quipu removes metadata whose
+artifact is missing, so quarantine can appear as a cache-corruption miss.
+
+If Protection history confirms a false positive, a folder exclusion scoped to
+Quipu's compiled cache allows it to persist. In an elevated PowerShell session
+for the same Windows account that runs Quipu:
+
+```powershell
+Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\com.corelight.quipu\compiled"
+```
+
+Recompile the project to recreate the missing cache, then restart and reopen it.
+
 Windows saves briefly acquire exclusive file access. An editor, scanner, or other
 process holding an incompatible handle can make Save fail; retry after that
 handle closes. The app compares the expected contents while holding exclusive

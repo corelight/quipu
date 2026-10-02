@@ -1017,7 +1017,7 @@ impl CacheManager {
             "started",
             serde_json::json!({ "artifactBytes": metadata.artifact.bytes }),
         );
-        let artifact = match read_regular_bounded(&artifact_path, metadata.artifact.bytes) {
+        let artifact = match read_regular_bounded(&artifact_path, metadata.artifact.bytes, trace) {
             Ok(bytes) => {
                 cache_stage!(
                     trace,
@@ -1885,18 +1885,44 @@ fn read_metadata_any(path: &Path) -> Result<Option<Metadata>, ReadFailure> {
     read_metadata(path)
 }
 
-fn read_regular_bounded(path: &Path, exact: u64) -> Result<Vec<u8>, ReadFailure> {
+fn read_regular_bounded(
+    path: &Path,
+    exact: u64,
+    trace: Option<&crate::debug_trace::DebugTrace>,
+) -> Result<Vec<u8>, ReadFailure> {
     let metadata = std::fs::symlink_metadata(path).map_err(|error| {
+        cache_stage!(trace, "artifact_metadata", "failed", serde_json::json!({
+            "reason": if error.kind() == io::ErrorKind::NotFound { "missing" } else { "io_error" },
+            "errorKind": format!("{:?}", error.kind()),
+            "osCode": error.raw_os_error(),
+        }));
         if error.kind() == std::io::ErrorKind::NotFound {
             ReadFailure::Corrupt
         } else {
             ReadFailure::Unavailable
         }
     })?;
+    cache_stage!(
+        trace,
+        "artifact_metadata",
+        "read",
+        serde_json::json!({
+        "isRegular": metadata.file_type().is_file(),
+            "declaredBytes": exact,
+            "actualBytes": metadata.len(),
+            "maximumBytes": MAX_ARTIFACT_BYTES,
+        })
+    );
     if !metadata.file_type().is_file() || !artifact_lengths_valid(exact, metadata.len()) {
         return Err(ReadFailure::Corrupt);
     }
-    let Some(bytes) = read_regular_bounded_optional(path, exact)? else {
+    let bytes = read_regular_bounded_optional(path, exact).inspect_err(|error| {
+        cache_stage!(trace, "artifact_read", "bounded_read_failed", serde_json::json!({
+            "reason": match error { ReadFailure::Corrupt => "invalid_contents", ReadFailure::Unavailable => "io_error" },
+        }));
+    })?;
+    let Some(bytes) = bytes else {
+        cache_stage!(trace, "artifact_read", "disappeared", serde_json::json!({}));
         return Err(ReadFailure::Corrupt);
     };
     if bytes.len() as u64 != exact {
