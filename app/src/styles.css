@@ -16,14 +16,16 @@
 
 * { box-sizing: border-box; }
 
+/* The window is a fixed viewport; individual panes own their scrolling. */
+html, body, #app { height: 100%; overflow: hidden; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  height: 100vh;
 }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { display: flex; flex-direction: column; }
 
 /* Columns: explorer | splitter | editor (flex) | results-splitter | results.
    The editor's 1fr absorbs extra window width. The results column is 0 when
@@ -100,6 +102,14 @@ main:not(.results-open) .results-splitter { cursor: pointer; }
   line-height: 1;
   cursor: pointer;
   z-index: 5;
+}
+/* At the window edge the 16px button cannot straddle its 6px track. That
+   overflow creates a horizontal scrollbar in WebView2, which also takes enough
+   height away to trigger a vertical scrollbar. Keep the whole button usable. */
+main:not(.results-open) .chevron {
+  left: auto;
+  right: 0;
+  transform: translateY(-50%);
 }
 
 .pane-head { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }

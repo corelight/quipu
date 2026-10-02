@@ -72,3 +72,15 @@ Before declaring Windows supported, validate installation and upgrades, launch,
 menus and shortcuts, file dialogs, save/rename conflicts, bundled examples,
 compilation/scanning, language-server diagnostics, watching, cache restoration,
 and offline documentation in a Windows desktop session.
+
+For the window layout and help regression check:
+
+1. Resize the main window, toggle the Results pane, and change View > Zoom. The
+   outer window must have no scrollbars, and the results chevron must remain
+   fully visible. Content inside panes should still scroll when necessary.
+2. Open Help > Documentation and follow Quick Start. Verify actual page content,
+   then close the help window with its title-bar X. The main window must respond.
+3. Open Help > Quick Start again, then choose File > Quit with help still open.
+   Both windows should close. Repeat using the main window's title-bar X.
+4. Repeat the last step after editing the scratch rule. Cancel the unsaved-work
+   prompt and check that both windows still respond, then quit and confirm.

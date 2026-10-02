@@ -85,7 +85,8 @@ The suite is a transcription of the manual acceptance walk done when the menu wa
 | `quit_guards_unsaved_work` | File > Quit asks before discarding a dirty scratch buffer; cancelling leaves the process running with working menus, and confirming closes the window and exits. Owns its session, because it ends by terminating the app. |
 | `close_workspace_confirms_discard` | Leaving a project asks about unsaved work in a dialogue that is really on screen: Open Folder asks after its picker, Close Workspace asks, cancelling either keeps the same project, text and menus, and approving closes the workspace. Owns its session, because it ends with no project open. |
 | `preferences_dialog` | File > Preferences is enabled, opens its bundled modal, reports the exact effective cache path beneath its isolated XDG cache root, and closes with Escape. Owns its profile so the expected backend path is known. |
-| `documentation_window` | Help > Documentation loads the bundled Zola site, whose Quick Start link navigates the same resizable window. Together with `menu_shape`, this covers both enabled Help entry points and singleton site navigation. Owns its session because it leaves the auxiliary window open. |
+| `documentation_window` | Help > Documentation loads the bundled Zola site, whose Quick Start link navigates the same resizable window. Native close dismisses help, Help > Quick Start recreates it, and File > Quit closes both windows. |
+| `documentation_native_close` | Repeats the help lifecycle with a native close request on the main window, verifying that both windows close. |
 
 `menu_shape` expects 9 labels in File, Quit included. Quit is worth knowing about: `muda`'s `is_item_supported!` accepts only `Separator | Copy | Cut | Paste | SelectAll | About` on GTK, so the *predefined* Quit item is silently dropped there - and on macOS the predefined one maps to `terminate:`, which exits the process without the window ever being asked to close, taking the unsaved-work guard with it. `menu.ts` therefore builds a regular menu item on every platform, so the File count and `LABEL_INDEX["file.quit"]` need no platform conditions if the suite is ever run on macOS.
 
@@ -96,7 +97,18 @@ The suite is a transcription of the manual acceptance walk done when the menu wa
 
 Because those dialogues are awaited, what an answer is still allowed to do is decided in `app/src/authorising.ts` and held to `app/src/authorising.test.mjs`; these scenarios prove the window exists and is connected, not what the gates decide.
 
-Not covered automatically: that a *clean* application exits without asking. It is the same path with an empty at-risk list, `closing.test.mjs` covers the decision, and a scenario for it would cost a whole extra app start to assert the absence of a dialog.
+`documentation_window` also covers closing a clean main window through File > Quit
+while an auxiliary window is open.
+
+### Chromium layout regression
+
+`python3 test/ui/layout_regression.py` checks the real app shell markup and CSS in
+headless Chromium. It needs Python Playwright (`pip install playwright` and
+`playwright install chromium`). It checks root overflow and chevron reachability
+at four window sizes with both side panes shown/hidden, and verifies that an
+overflowing editor pane still scrolls. This catches the Windows outer-scrollbar
+regression without requiring Tauri. It does not exercise Monaco or native window
+behaviour; the native suite and Windows desktop smoke tests cover those.
 
 ## The probes
 
