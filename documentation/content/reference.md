@@ -63,6 +63,10 @@ This is intentional: examples are persistent working copies, not disposable prev
 
 Open **File → Preferences…** and read the warning and effective location. Cache trouble does not prevent fresh compilation. Disable the cache if desired and continue with **Compile Workspace**.
 
+### Windows forgets a successful compilation after restarting
+
+Microsoft Defender may have quarantined the compiled rules because they contain detection patterns. Check Protection history for Quipu's `rules-…yarc` file. See [Windows Defender and missing cache entries](/docs/preferences-and-cache/index.html#windows-defender-and-missing-cache-entries) for the scoped exclusion, administrator instructions, and recompilation steps.
+
 ## Current limits
 
 - Quipu scans typed text or one selected file, not directories or file batches.

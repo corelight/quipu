@@ -1,7 +1,8 @@
 # Windows development
 
-Windows x86-64 builds are experimental pending interactive validation. Daily
-development can happen on Linux; GitHub Actions runs the Windows tests and builds
+Windows x86-64 builds have CI coverage and initial desktop smoke testing;
+remaining checks are recorded [below](#validation-status). Daily development
+can happen on Linux; GitHub Actions runs the Windows tests and builds
 NSIS `.exe` and WiX `.msi` installers using the MSVC toolchain on `windows-2022`.
 The CI workflow uploads `quipu-windows-x86_64` artifacts. The release workflow
 uses the same Windows job, waits for both platforms, and generates one combined
@@ -50,20 +51,10 @@ upgrades recognise the existing installation.
 
 ## Saving and filesystem behavior
 
-Compiled YARA rules contain detection patterns that Windows Defender can flag.
-If a cache disappears after compilation or at startup, check Windows Security's
-Protection history for the `rules-*.yarc` file. Quipu removes metadata whose
-artifact is missing, so quarantine can appear as a cache-corruption miss.
-
-If Protection history confirms a false positive, a folder exclusion scoped to
-Quipu's compiled cache allows it to persist. In an elevated PowerShell session
-for the same Windows account that runs Quipu:
-
-```powershell
-Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\com.corelight.quipu\compiled"
-```
-
-Recompile the project to recreate the missing cache, then restart and reopen it.
+Windows Defender can quarantine serialized YARA detection patterns. The bundled
+guide documents how to confirm this in Protection history and configure a
+scoped cache exclusion: see
+[Windows Defender and missing cache entries](../documentation/content/preferences-and-cache.md#windows-defender-and-missing-cache-entries).
 
 Windows saves briefly acquire exclusive file access. An editor, scanner, or other
 process holding an incompatible handle can make Save fail; retry after that
@@ -83,10 +74,36 @@ For VM testing, keep workspaces on the guest's local NTFS volume. Host shared
 folders have different filesystem behavior. Verbatim UNC include paths are
 currently rejected by compilation; network-share support is not validated.
 
-Before declaring Windows supported, validate installation and upgrades, launch,
-menus and shortcuts, file dialogs, save/rename conflicts, bundled examples,
-compilation/scanning, language-server diagnostics, watching, cache restoration,
-and offline documentation in a Windows desktop session.
+## Validation status
+
+The following results have been confirmed on this branch:
+
+| Environment | Confirmed coverage |
+| --- | --- |
+| GitHub Actions, Windows Server 2022 x86-64 | Rust tests, Clippy, frontend and documentation build, NSIS installation/uninstallation, and MSI administrative extraction with packaged-resource checks |
+| Windows desktop VM (exact Windows version not yet recorded) | Main-window scrollbar fix, Help/Quick Start rendering, native window close and menu Quit after opening help, Polaris compilation, and cache restoration after a confirmed Defender quarantine was resolved with a cache exclusion |
+
+MSI administrative extraction does not exercise an actual MSI installation.
+Complete and record these remaining desktop checks before a Windows release:
+
+- Actual MSI installation/uninstallation and installer upgrades over an earlier
+  build, including preservation of settings and cache.
+- Bundled examples and scans, language-server diagnostics, file dialogs, menus,
+  and keyboard shortcuts.
+- Save and rename behavior, external-edit conflicts, and file watching on local
+  NTFS storage.
+- The full window-layout and unsaved-work regression sequence below.
+
+Repository release checks still to record:
+
+- Require the Windows CI check in the GitHub `Protect main` ruleset, alongside
+  the existing frontend, Rust, and security checks.
+- Run the Release workflow manually on the branch and verify that its combined
+  `quipu-release` artifact contains both platforms and matching `SHA256SUMS`.
+  A manual run builds artifacts; publication requires a version tag.
+
+Authenticode signing and automated Windows GUI acceptance tests remain follow-up
+work.
 
 For the window layout and help regression check:
 

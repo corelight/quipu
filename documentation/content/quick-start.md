@@ -36,6 +36,8 @@ Choose **Rules → Compile Workspace**, or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd
 
 If compilation fails, open **Problems** and select a diagnostic to jump to its source. Correct the rule and compile again.
 
+On Windows, if a successful compilation is forgotten after restarting, check the [Defender cache guidance](/docs/preferences-and-cache/index.html#windows-defender-and-missing-cache-entries).
+
 ## 5. Scan the prepared target
 
 The example has already selected `targets/sample.txt`. Choose **Rules → Scan Target**, or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> (<kbd>Cmd</kbd> on macOS).

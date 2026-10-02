@@ -40,4 +40,30 @@ Disabling the cache stops future reads and writes but does not delete entries al
 
 Clearing disk cache entries does not unload the ruleset already held in memory. If the current project was compiled before you cleared it, you can continue scanning until an edit, refresh, project change, or other normal invalidation makes that ruleset stale.
 
+## Windows Defender and missing cache entries
+
+Compiled YARA rules contain detection patterns that Microsoft Defender can mistake for malicious content. If a successful compilation is lost after restarting Quipu, or cache files disappear, open **Windows Security → Virus & threat protection → Protection history**. Look for a detection involving a `rules-…yarc` file under Quipu's cache location, shown in **File → Preferences…**.
+
+When Defender quarantines that file, Quipu can no longer restore the ruleset and removes the metadata that referenced it. A missing artifact can therefore appear in older debug logs as a corrupt cache entry.
+
+If Protection history confirms a false positive, add an exclusion for **only Quipu's compiled-cache directory**:
+
+1. Copy the cache location from **File → Preferences…**. The default is `%LOCALAPPDATA%\com.corelight.quipu\compiled\v1`.
+2. Open **Start**, search for **Windows PowerShell**, and choose **Run as administrator**. Accept the elevation prompt.
+3. In that window, run the following command. It uses the default location for the account running PowerShell; if your cache location differs or you elevated using a different administrator account, substitute the full location copied from Quipu.
+
+```powershell
+Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\com.corelight.quipu\compiled\v1"
+```
+
+Alternatively, add that folder under **Windows Security → Virus & threat protection → Manage settings → Exclusions → Add or remove exclusions**. Organisation policy may require your administrator to make the change. Quipu does not configure Defender exclusions itself.
+
+Reopen Quipu and choose **Compile Workspace** to recreate the missing cache. Restart and open the unchanged project again; it should restore to **Compiled**. The exclusion applies to this cache folder, so keep rule repositories and scan targets elsewhere.
+
+To remove the exclusion later, run this in an elevated PowerShell window using the same folder you excluded:
+
+```powershell
+Remove-MpPreference -ExclusionPath "$env:LOCALAPPDATA\com.corelight.quipu\compiled\v1"
+```
+
 Next: [Reference and troubleshooting](/docs/reference/index.html).
