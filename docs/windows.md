@@ -1,7 +1,7 @@
 # Windows development
 
-Windows x86-64 builds have CI coverage and initial desktop smoke testing;
-remaining checks are recorded [below](#validation-status). Daily development
+Windows x86-64 builds have CI coverage and completed Windows 11 desktop validation,
+recorded [below](#validation-status). Daily development
 can happen on Linux; GitHub Actions runs the Windows tests and builds
 NSIS `.exe` and WiX `.msi` installers using the MSVC toolchain on `windows-2022`.
 The CI workflow uploads `quipu-windows-x86_64` artifacts. The release workflow
@@ -81,10 +81,11 @@ The following results have been confirmed on this branch:
 | Environment | Confirmed coverage |
 | --- | --- |
 | GitHub Actions, Windows Server 2022 x86-64 | Rust tests, Clippy, frontend and documentation build, NSIS installation/uninstallation, and MSI administrative extraction with packaged-resource checks |
-| Windows desktop VM (exact Windows version not yet recorded) | Main-window scrollbar fix, Help/Quick Start rendering, native window close and menu Quit after opening help, Polaris compilation, and cache restoration after a confirmed Defender quarantine was resolved with a cache exclusion |
+| Windows 11 Version 24H2, OS Build 26100.9457, desktop VM | User-confirmed completion of the desktop checklist below, including actual MSI installation, upgrades, file operations, scans, diagnostics, and window/quit regressions; Polaris compilation and cache restoration after a confirmed Defender quarantine was resolved with a cache exclusion |
 
-MSI administrative extraction does not exercise an actual MSI installation.
-Complete and record these remaining desktop checks before a Windows release:
+The user confirmed the following desktop checks complete on 2026-10-04.
+This supplements CI's MSI administrative extraction with actual installation
+and interactive testing:
 
 - Actual MSI installation/uninstallation and installer upgrades over an earlier
   build, including preservation of settings and cache.

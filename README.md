@@ -19,7 +19,7 @@ server, so you do not need a separate YARA installation.
 
 > [!IMPORTANT]
 > Quipu is at MVP stage. Builds target Linux and Windows x86-64.
-> Windows desktop validation is still in progress; see the
+> Windows desktop validation covers Windows 11 24H2; see the
 > [validation record](docs/windows.md#validation-status). macOS packages are not yet available.
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
