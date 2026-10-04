@@ -19,6 +19,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Late Windows file-watcher events from removed nested watches causing
+  unnecessary project refreshes after coverage is narrowed.
 - Help and Quick Start window creation deadlocking on Windows, leaving blank
   documentation and preventing the application from closing.
 - Outer window scrollbars caused by the collapsed results-pane button extending

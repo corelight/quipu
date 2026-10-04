@@ -5,7 +5,8 @@ exception is listed here with a specific rationale. Exceptions are temporary
 and must be reconsidered whenever the affected dependency or its parent stack is
 updated.
 
-The assessments below cover the dependency graph locked on 2026-10-01. An
+The assessments below cover the dependency graph locked on 2026-10-01, with
+RUSTSEC-2026-0327 assessed against that unchanged graph on 2026-10-04. An
 exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
 
@@ -80,6 +81,28 @@ it must be reviewed if any of those change.
 - **Removal condition:** Remove each exception when YARA-X adopts a Wasmtime
   release patched for it. Reassess immediately if YARA-X changes its Wasmtime
   features, introduces WASI/component APIs, or creates more than one engine.
+
+## RUSTSEC-2026-0327: `wasmtime` 45.0.3
+
+- **Status:** Temporarily ignored in `.github/workflows/security.yml`.
+  The upstream fixes are in 48.0.4 and 49.0.2; YARA-X 1.20.0 constrains
+  Wasmtime to the unpatched 45.x line.
+- **Dependency path:** YARA-X uses Wasmtime for the core WebAssembly generated
+  from rule conditions. Quipu does not use the component API.
+- **Affected operation:** A malformed component's async-lifted callback can
+  overflow the native stack because its result count is not validated.
+- **Exposure assessment:** The upstream
+  [advisory](https://github.com/bytecodealliance/wasmtime/security/advisories/GHSA-32h6-97mm-8q3c)
+  explicitly identifies disabling `component-model-async` as a workaround.
+  `cargo tree --locked --offline --target all -e features -i wasmtime` confirms
+  that neither `component-model` nor `component-model-async` is enabled in
+  Quipu's resolved graph, including Windows. YARA-X disables Wasmtime defaults
+  and requests only `cranelift` and `runtime`; their transitive features do not
+  enable component support. The affected execution path is therefore absent.
+- **Removal condition:** Remove the exception when YARA-X permits a patched
+  Wasmtime version. Reassess on every YARA-X/Wasmtime update or feature change;
+  enabling component async support invalidates this exception and requires an
+  upgrade to a patched version first.
 
 ## Non-failing informational warnings
 

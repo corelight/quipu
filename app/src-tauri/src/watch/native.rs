@@ -41,6 +41,10 @@
 //! keeping this instance worth doing, and the plan it was armed with is one the
 //! project has moved on from.
 //!
+//! Windows queues unwatch requests without waiting for their completion. The
+//! filter must therefore enforce each retained target's depth: a non-recursive
+//! parent watch cannot justify a late callback from a removed nested watch.
+//!
 //! Dropping a watch is not always free for the watches that remain. `notify`'s macOS
 //! backend runs one FSEvents stream per watcher, so removing a path from it stops that
 //! stream and starts a fresh one from `kFSEventStreamEventIdSinceNow`: for an instant,

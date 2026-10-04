@@ -63,13 +63,14 @@ pub(crate) struct WatchTarget {
 impl WatchTarget {
     /// Whether an event naming `path` could have come from this target's watch.
     ///
-    /// Ancestry rather than a test against [`Self::scope`]: what the OS delivers is
-    /// decided by how the watch was installed, and second-guessing that here could
-    /// only discard a real event to enforce something already true. A directory watch
-    /// reports its own entries and its own disappearance, and a recursive watch
-    /// reports its whole subtree; both are ancestry.
+    /// Respect the installed depth even when the backend normally does so for us:
+    /// Windows unwatch is asynchronous, so a removed nested watch can still deliver
+    /// callbacks after this instance is narrowed to its non-recursive parent.
     pub(crate) fn covers(&self, path: &Path) -> bool {
-        path.starts_with(&self.path)
+        match self.scope {
+            Scope::Tree => path.starts_with(&self.path),
+            Scope::Directory => path == self.path || path.parent() == Some(self.path.as_path()),
+        }
     }
 }
 
