@@ -94,13 +94,17 @@ Complete and record these remaining desktop checks before a Windows release:
   NTFS storage.
 - The full window-layout and unsaved-work regression sequence below.
 
-Repository release checks still to record:
+Repository release validation:
 
-- Require the Windows CI check in the GitHub `Protect main` ruleset, alongside
-  the existing frontend, Rust, and security checks.
-- Run the Release workflow manually on the branch and verify that its combined
-  `quipu-release` artifact contains both platforms and matching `SHA256SUMS`.
-  A manual run builds artifacts; publication requires a version tag.
+- The GitHub `Protect main` ruleset requires
+  `Windows x86-64 / Test and package Windows x86-64`, alongside the existing
+  frontend, Rust, and security checks. Existing protections remain in place.
+- The manual [Release workflow run for `aedf1b7`](https://github.com/corelight/quipu/actions/runs/36976404977)
+  passed Linux and Windows package validation and combined artifact assembly.
+  The downloaded `quipu-release` artifact contains AppImage, DEB, RPM, NSIS,
+  and MSI packages; all five hashes match `SHA256SUMS`, with no missing or extra
+  package entries. Publication was skipped, as expected for a branch run;
+  publication requires a version tag.
 
 Authenticode signing and automated Windows GUI acceptance tests remain follow-up
 work.
