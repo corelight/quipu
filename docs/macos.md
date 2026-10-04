@@ -69,8 +69,14 @@ read-only, verifies its integrity, executable architecture, bundle metadata and
 ad-hoc signature, and compares the bundled examples and license notices with
 the source tree.
 
-Native CI execution is pending the first branch run. Interactive desktop
-validation is also pending; a successful package build does not establish full
+Three filesystem fixtures that create non-UTF-8 filenames are ignored on macOS
+because APFS rejects those names with `EILSEQ`. They still run on Linux; the
+in-memory non-Unicode path identity test also runs on macOS.
+
+The first native CI run passed Clippy and 296 Rust tests on both architectures;
+the three APFS-incompatible fixtures above were the only test failures. Package
+validation is pending the follow-up run. Interactive desktop validation is also
+pending; a successful package build does not establish full
 macOS support. On each architecture, check:
 
 - Install from a downloaded DMG, launch through Gatekeeper, and reopen the app.

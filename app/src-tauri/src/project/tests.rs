@@ -635,6 +635,10 @@ fn a_non_unicode_path_has_no_identity_but_still_has_a_display_form() {
 
 #[cfg(unix)]
 #[test]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "requires a filesystem accepting non-UTF-8 names; APFS rejects them"
+)]
 fn a_non_unicode_rule_filename_is_reported_and_left_out_of_the_project() {
     let fixture = Fixture::new();
     fixture.write("main.yar", &rule("main"));
@@ -660,6 +664,10 @@ fn a_non_unicode_rule_filename_is_reported_and_left_out_of_the_project() {
 
 #[cfg(unix)]
 #[test]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "requires a filesystem accepting non-UTF-8 names; APFS rejects them"
+)]
 fn a_non_unicode_directory_name_is_reported_because_it_cannot_be_walked() {
     let fixture = Fixture::new();
     fixture.write("main.yar", &rule("main"));
@@ -678,6 +686,10 @@ fn a_non_unicode_directory_name_is_reported_because_it_cannot_be_walked() {
 
 #[cfg(unix)]
 #[test]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "requires a filesystem accepting non-UTF-8 names; APFS rejects them"
+)]
 fn two_non_unicode_filenames_do_not_collapse_into_one_identity() {
     let fixture = Fixture::new();
     fixture.write_raw(non_unicode(b"a\xff.yar"), &rule("one"));
