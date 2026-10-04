@@ -9,6 +9,12 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Experimental macOS 15+ CI builds for Apple Silicon and Intel, with ad-hoc
+  signed DMGs, package validation, and development instructions. These builds
+  are not notarized and are not yet included in releases.
+
 ## [0.3.0] - 2026-10-04
 
 ### Added

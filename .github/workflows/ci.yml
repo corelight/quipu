@@ -116,6 +116,10 @@ jobs:
     name: Windows x86-64
     uses: ./.github/workflows/windows-build.yml
 
+  macos:
+    name: macOS (experimental)
+    uses: ./.github/workflows/macos-build.yml
+
   harness:
     name: UI harness unit tests
     runs-on: ubuntu-24.04
