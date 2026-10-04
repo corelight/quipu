@@ -22,7 +22,9 @@ cleanup() {
 }
 trap cleanup EXIT
 hdiutil verify "${packages[0]}"
-hdiutil attach "${packages[0]}" -readonly -nobrowse -mountpoint "$mount_point"
+# Tauri embeds our BSD license as a DMG license prompt. Accept it explicitly
+# when mounting noninteractively; EOF otherwise cancels the mount in CI.
+hdiutil attach "${packages[0]}" -readonly -nobrowse -mountpoint "$mount_point" <<< 'Y'
 mounted=true
 
 app="$mount_point/Quipu.app"

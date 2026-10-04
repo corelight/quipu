@@ -73,10 +73,10 @@ Three filesystem fixtures that create non-UTF-8 filenames are ignored on macOS
 because APFS rejects those names with `EILSEQ`. They still run on Linux; the
 in-memory non-Unicode path identity test also runs on macOS.
 
-The first native CI run passed Clippy and 296 Rust tests on both architectures;
-the three APFS-incompatible fixtures above were the only test failures. Package
-validation is pending the follow-up run. Interactive desktop validation is also
-pending; a successful package build does not establish full
+Native CI has passed Clippy and 296 Rust tests on both architectures and produced
+ad-hoc signed apps and DMGs. Final package validation is pending a follow-up run
+to accept the embedded BSD license when mounting the DMG noninteractively.
+Interactive desktop validation is also pending; a successful package build does not establish full
 macOS support. On each architecture, check:
 
 - Install from a downloaded DMG, launch through Gatekeeper, and reopen the app.
