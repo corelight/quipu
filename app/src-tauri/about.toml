@@ -16,9 +16,8 @@ accepted = [
     "Zlib",
 ]
 
-# The initial release artifacts are Linux x86-64 only. Add future shipping
-# targets here before producing their license inventories.
-targets = ["x86_64-unknown-linux-gnu"]
+# Include every packaged target in the combined runtime license inventory.
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 
 # Quipu's own license is distributed separately as LICENSE; this inventory is
 # specifically for software incorporated from third parties.

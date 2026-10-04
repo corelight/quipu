@@ -533,6 +533,46 @@ fn truncated_artifacts_are_rejected_before_deserialization() {
 }
 
 #[test]
+fn artifact_read_trace_distinguishes_missing_from_truncated_files() {
+    for missing in [true, false] {
+        let harness = Harness::new();
+        harness.commit();
+        let artifact = harness.artifact_path();
+        let declared = harness.metadata().artifact.bytes;
+        if missing {
+            std::fs::remove_file(&artifact).expect("remove artifact");
+        } else {
+            std::fs::write(&artifact, b"short").expect("truncate artifact");
+        }
+        let (trace, lines) = crate::debug_trace::DebugTrace::captured();
+        assert!(matches!(
+            harness.manager.load_observed(&harness.plan(), Some(&trace)),
+            LoadOutcome::Miss(MissReason::Corrupt)
+        ));
+        assert!(trace.flush());
+        let lines = lines.lock().expect("trace");
+        let record = lines
+            .iter()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("JSON"))
+            .find(|record| record["fields"]["stage"] == "artifact_metadata")
+            .expect("artifact inspection evidence");
+        if missing {
+            assert_eq!(record["fields"]["detail"]["reason"], "missing");
+            assert!(record["fields"]["detail"]["osCode"].is_number());
+        } else {
+            assert_eq!(record["fields"]["detail"]["isRegular"], true);
+            assert_eq!(record["fields"]["detail"]["actualBytes"], 5);
+            assert_eq!(record["fields"]["detail"]["declaredBytes"], declared);
+        }
+        assert!(
+            !lines
+                .join("\n")
+                .contains(&artifact.to_string_lossy().into_owned())
+        );
+    }
+}
+
+#[test]
 fn excessive_declared_artifact_size_is_rejected_before_hash_or_deserialization() {
     let harness = Harness::new();
     let plan = harness.plan();
@@ -1353,6 +1393,90 @@ fn unavailable_maintenance_is_a_cache_only_failure() {
         manager.warning().as_deref(),
         Some("compiled cache maintenance is unavailable")
     );
+}
+
+#[test]
+fn maintenance_read_failure_preserves_the_committed_entry() {
+    let harness = Harness::new();
+    harness.commit();
+    let metadata = harness.metadata();
+    let artifact = harness.artifact_path();
+    *harness.hooks.fail.lock().expect("failure") = Some(Point::BeforeArtifactHash);
+
+    available_usage(harness.manager.maintain(Some(&harness.fixture.root)));
+
+    assert_eq!(harness.metadata(), metadata, "unreadable is not corrupt");
+    assert!(artifact.exists());
+    assert!(harness.manager.warning().is_some());
+    *harness.hooks.fail.lock().expect("failure") = None;
+    assert_hit(harness.manager.load(&harness.plan()));
+}
+
+#[test]
+fn persistence_trace_distinguishes_commit_failure_without_exposing_project_data() {
+    let harness = Harness::new();
+    let (trace, lines) = crate::debug_trace::DebugTrace::captured();
+    *harness.hooks.fail.lock().expect("failure") = Some(Point::BeforeMetadataCommit);
+    let outcome = harness
+        .manager
+        .commit_observed(harness.proposal(), Some(&trace));
+    assert_eq!(outcome, CommitOutcome::Unavailable);
+    assert!(trace.flush());
+    let output = lines.lock().expect("trace").join("\n");
+    assert!(output.contains("BeforeMetadataCommit"));
+    assert!(output.contains("Unavailable"));
+    assert!(!output.contains(&harness.fixture.root.to_string_lossy().into_owned()));
+    assert!(!output.contains("main.yar"));
+    assert!(!output.contains("rule cached"));
+}
+
+#[test]
+fn cache_io_evidence_keeps_codes_but_not_os_error_text() {
+    let detail = cache_io_error(
+        "cache temporary write failed",
+        io::Error::from_raw_os_error(5),
+    );
+    assert!(detail.contains("OS code: Some(5)"));
+    let detail = cache_io_error(
+        "cache temporary write failed",
+        io::Error::other("private/path/to/rules"),
+    );
+    assert!(!detail.contains("private"));
+}
+
+#[cfg(windows)]
+#[test]
+fn maintenance_sharing_violations_preserve_metadata_and_artifact() {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    for lock_metadata in [true, false] {
+        let harness = Harness::new();
+        harness.commit();
+        let metadata = harness.metadata();
+        let metadata_path = harness.target_dir().join("metadata.json");
+        let artifact = harness.artifact_path();
+        let held = OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(if lock_metadata {
+                &metadata_path
+            } else {
+                &artifact
+            })
+            .expect("hold cache file exclusively");
+
+        let _ = harness.manager.maintain(Some(&harness.fixture.root));
+        drop(held);
+
+        assert_eq!(
+            harness.metadata(),
+            metadata,
+            "sharing violation lost metadata"
+        );
+        assert!(artifact.exists(), "sharing violation lost artifact");
+        let restarted = CacheManager::new(harness.cache_root.clone(), harness.config_root.clone());
+        assert_hit(restarted.load(&harness.plan()));
+    }
 }
 
 // --- Backend-owned settings -----------------------------------------------

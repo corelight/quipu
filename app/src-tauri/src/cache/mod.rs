@@ -596,7 +596,32 @@ impl CacheManager {
         Ok(state.settings)
     }
 
+    #[cfg(test)]
     pub(crate) fn commit(&self, proposal: ProposedEntry) -> CommitOutcome {
+        self.commit_observed(proposal, None)
+    }
+
+    pub(crate) fn commit_observed(
+        &self,
+        proposal: ProposedEntry,
+        trace: Option<&crate::debug_trace::DebugTrace>,
+    ) -> CommitOutcome {
+        let outcome = self.commit_inner(proposal, trace);
+        if let Some(trace) = trace {
+            trace.event_lazy("cache_persistence", || {
+                serde_json::json!({
+                    "stage": "commit", "outcome": format!("{outcome:?}"),
+                })
+            });
+        }
+        outcome
+    }
+
+    fn commit_inner(
+        &self,
+        proposal: ProposedEntry,
+        trace: Option<&crate::debug_trace::DebugTrace>,
+    ) -> CommitOutcome {
         if !self.available {
             return CommitOutcome::Unavailable;
         }
@@ -618,10 +643,15 @@ impl CacheManager {
                 // The just-compiled project is the active entry for automatic
                 // quota. Persistence has already committed, so maintenance
                 // failure is a warning and never changes compile success.
-                if self
-                    .maintenance_locked(Some(&active_project), settings.maximum_bytes)
-                    .is_err()
-                {
+                let maintenance =
+                    self.maintenance_locked(Some(&active_project), settings.maximum_bytes);
+                if let Some(trace) = trace {
+                    trace.event_lazy("cache_persistence", || serde_json::json!({
+                        "stage": "maintenance", "ok": maintenance.is_ok(),
+                        "currentProjectCached": maintenance.as_ref().ok().map(|usage| usage.current_project_cached),
+                    }));
+                }
+                if maintenance.is_err() {
                     self.set_warning(
                         WarningOwner::Maintenance,
                         "compiled cache maintenance is unavailable",
@@ -633,7 +663,19 @@ impl CacheManager {
             Ok(outcome @ CommitOutcome::MetadataOverLimit) => outcome,
             Ok(outcome @ CommitOutcome::QuotaExceeded) => outcome,
             Ok(outcome @ CommitOutcome::Declined(_)) => outcome,
-            Ok(CommitOutcome::Unavailable) | Err(_) => CommitOutcome::Unavailable,
+            Ok(CommitOutcome::Unavailable) => CommitOutcome::Unavailable,
+            Err(reason) => {
+                if let Some(trace) = trace {
+                    // Cache errors are fixed operation labels, optionally with a
+                    // numeric OS error; never raw OS text containing paths.
+                    trace.event_lazy("cache_persistence", || {
+                        serde_json::json!({
+                            "stage": "storage", "outcome": "failed", "reason": reason,
+                        })
+                    });
+                }
+                CommitOutcome::Unavailable
+            }
         }
     }
 
@@ -975,7 +1017,7 @@ impl CacheManager {
             "started",
             serde_json::json!({ "artifactBytes": metadata.artifact.bytes }),
         );
-        let artifact = match read_regular_bounded(&artifact_path, metadata.artifact.bytes) {
+        let artifact = match read_regular_bounded(&artifact_path, metadata.artifact.bytes, trace) {
             Ok(bytes) => {
                 cache_stage!(
                     trace,
@@ -1299,7 +1341,13 @@ impl CacheManager {
         }
 
         let metadata_path = target_dir.join("metadata.json");
-        let metadata = read_metadata(&metadata_path).ok().flatten();
+        let metadata = match read_metadata(&metadata_path) {
+            Ok(metadata) => metadata,
+            Err(ReadFailure::Corrupt) => None,
+            // A sharing violation or other I/O failure is not evidence that
+            // metadata (or its artifact) is invalid. Leave both for a retry.
+            Err(ReadFailure::Unavailable) => return Err("cache metadata unavailable".into()),
+        };
         let mut clean = true;
         let mut live = None;
         let mut live_artifact = None;
@@ -1317,12 +1365,17 @@ impl CacheManager {
                 && is_lower_hex(&metadata.artifact.digest, 64);
             if structurally_valid && let Some(name) = artifact_name {
                 let artifact_path = target_dir.join(&name);
-                let artifact_valid = digest_regular_exact(
+                let artifact_valid = match digest_regular_exact(
                     &artifact_path,
                     metadata.artifact.bytes,
                     self.hooks.as_ref(),
-                )
-                .is_ok_and(|digest| digest == metadata.artifact.digest);
+                ) {
+                    Ok(digest) => digest == metadata.artifact.digest,
+                    Err(ReadFailure::Corrupt) => false,
+                    Err(ReadFailure::Unavailable) => {
+                        return Err("cache artifact unavailable".into());
+                    }
+                };
                 if artifact_valid {
                     live_artifact = Some(name);
                     live = Some(LiveEntry {
@@ -1832,18 +1885,44 @@ fn read_metadata_any(path: &Path) -> Result<Option<Metadata>, ReadFailure> {
     read_metadata(path)
 }
 
-fn read_regular_bounded(path: &Path, exact: u64) -> Result<Vec<u8>, ReadFailure> {
+fn read_regular_bounded(
+    path: &Path,
+    exact: u64,
+    trace: Option<&crate::debug_trace::DebugTrace>,
+) -> Result<Vec<u8>, ReadFailure> {
     let metadata = std::fs::symlink_metadata(path).map_err(|error| {
+        cache_stage!(trace, "artifact_metadata", "failed", serde_json::json!({
+            "reason": if error.kind() == io::ErrorKind::NotFound { "missing" } else { "io_error" },
+            "errorKind": format!("{:?}", error.kind()),
+            "osCode": error.raw_os_error(),
+        }));
         if error.kind() == std::io::ErrorKind::NotFound {
             ReadFailure::Corrupt
         } else {
             ReadFailure::Unavailable
         }
     })?;
+    cache_stage!(
+        trace,
+        "artifact_metadata",
+        "read",
+        serde_json::json!({
+        "isRegular": metadata.file_type().is_file(),
+            "declaredBytes": exact,
+            "actualBytes": metadata.len(),
+            "maximumBytes": MAX_ARTIFACT_BYTES,
+        })
+    );
     if !metadata.file_type().is_file() || !artifact_lengths_valid(exact, metadata.len()) {
         return Err(ReadFailure::Corrupt);
     }
-    let Some(bytes) = read_regular_bounded_optional(path, exact)? else {
+    let bytes = read_regular_bounded_optional(path, exact).inspect_err(|error| {
+        cache_stage!(trace, "artifact_read", "bounded_read_failed", serde_json::json!({
+            "reason": match error { ReadFailure::Corrupt => "invalid_contents", ReadFailure::Unavailable => "io_error" },
+        }));
+    })?;
+    let Some(bytes) = bytes else {
+        cache_stage!(trace, "artifact_read", "disappeared", serde_json::json!({}));
         return Err(ReadFailure::Corrupt);
     };
     if bytes.len() as u64 != exact {
@@ -1897,6 +1976,15 @@ fn read_exact_bounded(
     }
 }
 
+// Preserve actionable I/O evidence without logging OS error text or local paths.
+fn cache_io_error(operation: &str, error: io::Error) -> String {
+    format!(
+        "{operation} (kind: {:?}, OS code: {:?})",
+        error.kind(),
+        error.raw_os_error()
+    )
+}
+
 fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
@@ -1907,23 +1995,26 @@ fn write_new_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
     }
     let mut file = options
         .open(path)
-        .map_err(|_| "cache temporary unavailable".to_string())?;
+        .map_err(|error| cache_io_error("cache temporary unavailable", error))?;
     file.write_all(bytes)
-        .map_err(|_| "cache temporary write failed".to_string())?;
+        .map_err(|error| cache_io_error("cache temporary write failed", error))?;
     file.flush()
-        .map_err(|_| "cache temporary flush failed".to_string())?;
+        .map_err(|error| cache_io_error("cache temporary flush failed", error))?;
     file.sync_all()
-        .map_err(|_| "cache temporary sync failed".to_string())
+        .map_err(|error| cache_io_error("cache temporary sync failed", error))
 }
 
 fn install_no_replace(from: &Path, to: &Path) -> Result<(), String> {
-    std::fs::hard_link(from, to).map_err(|_| "cache artifact install failed".to_string())?;
-    std::fs::remove_file(from).map_err(|_| "cache artifact temporary cleanup failed".to_string())
+    std::fs::hard_link(from, to)
+        .map_err(|error| cache_io_error("cache artifact install failed", error))?;
+    std::fs::remove_file(from)
+        .map_err(|error| cache_io_error("cache artifact temporary cleanup failed", error))
 }
 
 #[cfg(not(windows))]
 fn atomic_replace(from: &Path, to: &Path) -> Result<(), String> {
-    std::fs::rename(from, to).map_err(|_| "cache metadata replacement failed".to_string())
+    std::fs::rename(from, to)
+        .map_err(|error| cache_io_error("cache metadata replacement failed", error))
 }
 
 #[cfg(windows)]
@@ -1934,7 +2025,7 @@ fn atomic_replace(from: &Path, to: &Path) -> Result<(), String> {
     use windows_sys::Win32::Storage::FileSystem::ReplaceFileW;
     if std::fs::symlink_metadata(to).is_err() {
         return std::fs::rename(from, to)
-            .map_err(|_| "cache metadata installation failed".to_string());
+            .map_err(|error| cache_io_error("cache metadata installation failed", error));
     }
     let wide = |path: &Path| {
         path.as_os_str()
@@ -1955,7 +2046,10 @@ fn atomic_replace(from: &Path, to: &Path) -> Result<(), String> {
         )
     };
     if ok == 0 {
-        Err("cache metadata replacement failed".into())
+        Err(cache_io_error(
+            "cache metadata replacement failed",
+            io::Error::last_os_error(),
+        ))
     } else {
         Ok(())
     }
@@ -1965,7 +2059,7 @@ fn atomic_replace(from: &Path, to: &Path) -> Result<(), String> {
 fn sync_dir(path: &Path) -> Result<(), String> {
     File::open(path)
         .and_then(|file| file.sync_all())
-        .map_err(|_| "cache directory sync failed".to_string())
+        .map_err(|error| cache_io_error("cache directory sync failed", error))
 }
 
 #[cfg(not(unix))]
@@ -2056,34 +2150,39 @@ fn regular_usage_nofollow(path: &Path) -> Result<u64, String> {
     Ok(total)
 }
 
-fn digest_regular_exact(path: &Path, exact: u64, hooks: &dyn Hooks) -> Result<String, String> {
-    let metadata =
-        std::fs::symlink_metadata(path).map_err(|_| "cache artifact unavailable".to_string())?;
+fn digest_regular_exact(path: &Path, exact: u64, hooks: &dyn Hooks) -> Result<String, ReadFailure> {
+    let metadata = std::fs::symlink_metadata(path).map_err(|error| {
+        if error.kind() == io::ErrorKind::NotFound {
+            ReadFailure::Corrupt
+        } else {
+            ReadFailure::Unavailable
+        }
+    })?;
     if !metadata.file_type().is_file() || !artifact_lengths_valid(exact, metadata.len()) {
-        return Err("cache artifact is invalid".into());
+        return Err(ReadFailure::Corrupt);
     }
-    hooks.check(Point::BeforeArtifactHash)?;
-    let mut file = File::open(path).map_err(|_| "cache artifact unavailable".to_string())?;
+    hooks
+        .check(Point::BeforeArtifactHash)
+        .map_err(|_| ReadFailure::Unavailable)?;
+    let mut file = File::open(path).map_err(|_| ReadFailure::Unavailable)?;
     let mut hasher = blake3::Hasher::new();
     let mut buffer = [0u8; 64 * 1024];
     let mut read = 0u64;
     loop {
         let count = file
             .read(&mut buffer)
-            .map_err(|_| "cache artifact unavailable".to_string())?;
+            .map_err(|_| ReadFailure::Unavailable)?;
         if count == 0 {
             break;
         }
-        read = read
-            .checked_add(count as u64)
-            .ok_or_else(|| "cache artifact length overflow".to_string())?;
+        read = read.checked_add(count as u64).ok_or(ReadFailure::Corrupt)?;
         if read > exact {
-            return Err("cache artifact is invalid".into());
+            return Err(ReadFailure::Corrupt);
         }
         hasher.update(&buffer[..count]);
     }
     if read != exact {
-        return Err("cache artifact is invalid".into());
+        return Err(ReadFailure::Corrupt);
     }
     Ok(hasher.finalize().to_hex().to_string())
 }

@@ -9,6 +9,25 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Windows x86-64 builds with NSIS and MSI installers and WebView2 runtime setup.
+- Windows CI tests and installer validation, with Linux and Windows packages
+  collected together for releases and covered by a combined `SHA256SUMS` file.
+- Windows installation, development, and Defender cache troubleshooting guidance.
+- Debug trace details for cache persistence outcomes and missing artifacts.
+
+### Fixed
+
+- Late Windows file-watcher events from removed nested watches causing
+  unnecessary project refreshes after coverage is narrowed.
+- Help and Quick Start window creation deadlocking on Windows, leaving blank
+  documentation and preventing the application from closing.
+- Outer window scrollbars caused by the collapsed results-pane button extending
+  beyond the viewport.
+- Cache maintenance deleting valid entries after temporary read failures,
+  including Windows file-sharing conflicts.
+
 ## [0.2.0] - 2026-10-01
 
 ### Added

@@ -74,17 +74,13 @@ getrandom = "0.3"
 # need; macos_fsevent is kept because it is notify's macOS backend.
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 
-# Renaming a rule file, and installing an example's working copy, need an atomic
-# no-replace rename (`renameat2` with `RENAME_NOREPLACE` on Linux, `renamex_np`
-# with `RENAME_EXCL` on macOS); see src/fs.rs. rustix is already in the graph, and
-# wraps both without Quipu doing its own unsafe FFI. Only the platforms Quipu
-# ships on are listed: any other target gets an explicit refusal rather than a
-# rename that could replace someone's directory.
+# Unix no-replace rename and atomic exchange for conditional saves; see src/fs.rs.
+# Windows uses MoveFileExW without replacement, and exclusive handles for saves.
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 rustix = { version = "1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem"] }
 
 [dev-dependencies]
 # Project-model tests build throwaway project trees on disk.

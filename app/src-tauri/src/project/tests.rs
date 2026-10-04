@@ -12,7 +12,9 @@
 //! Assertions are on structured values - identities, edges, entrypoints, issue
 //! codes, plan validity - never on `Debug` output.
 
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
+#[cfg(unix)]
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use super::*;
@@ -48,6 +50,7 @@ impl Fixture {
 
     /// Writes a file in the project root under a name that need not be valid
     /// Unicode.
+    #[cfg(unix)]
     fn write_raw(&self, name: OsString, contents: &str) -> &Self {
         write_at(&self.root.join(name), contents);
         self

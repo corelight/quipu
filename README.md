@@ -18,8 +18,9 @@ embeds both [YARA-X](https://github.com/VirusTotal/yara-x) and its language
 server, so you do not need a separate YARA installation.
 
 > [!IMPORTANT]
-> Quipu is at MVP stage. The initial supported platform is 64-bit Linux;
-> Windows and macOS support will follow.
+> Quipu is at MVP stage. Builds target Linux and Windows x86-64.
+> Windows desktop validation covers Windows 11 24H2; see the
+> [validation record](docs/windows.md#validation-status). macOS packages are not yet available.
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
 
@@ -67,6 +68,39 @@ sha256sum --ignore-missing --check SHA256SUMS
 The checksums detect accidental corruption but are not an authenticated
 signature.
 
+## Install on Windows
+
+Windows x86-64 installers are built by
+[GitHub Actions](https://github.com/corelight/quipu/actions/workflows/ci.yml).
+Until the first release containing Windows packages, download the
+`quipu-windows-x86_64` artifact from a successful workflow run and extract it.
+The published v0.2.0 release contains Linux packages only.
+
+- Use the NSIS `.exe` installer for a current-user installation.
+- An MSI `.msi` installer is also available.
+- Microsoft Edge WebView2 is required. The installer downloads its bootstrapper
+  if the runtime is missing, so installation may need internet access.
+
+The installers are unsigned, so Windows may show an unknown-publisher or
+SmartScreen warning. Check that your download came from this repository's
+release or workflow before proceeding.
+
+Release packages include a combined `SHA256SUMS` file. In PowerShell, calculate
+the hash of your downloaded installer (replace the example filename):
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\Quipu_VERSION_x64-setup.exe
+Get-Content .\SHA256SUMS
+```
+
+Compare the hash with the entry for that exact filename, ignoring letter case.
+Individual CI artifacts do not include the combined release checksum file.
+
+If a compiled ruleset is forgotten after restarting, check the bundled guide's
+[Windows Defender troubleshooting](documentation/content/preferences-and-cache.md#windows-defender-and-missing-cache-entries).
+It explains how to confirm a quarantine and, if needed, exclude only the cache
+directory.
+
 ## Quick start
 
 1. Start Quipu and choose **File → Open Example… → Basic text match**.
@@ -99,13 +133,17 @@ complete project model and manifest reference.
 
 ## Build from source
 
-Quipu currently targets Linux x86-64. A build needs:
+Both platforms need:
 
 - Rust 1.93 or newer
 - Node.js 22.6 or newer
-- Zola 0.23
+- Zola 0.23.6
 - Git
-- the native libraries required by Tauri and WebKitGTK
+
+For Windows, follow [Windows development](docs/windows.md) for the MSVC build
+tools, Windows SDK, WebView2 runtime, and PowerShell build commands.
+
+Linux also needs the native libraries required by Tauri and WebKitGTK.
 
 On Debian or Ubuntu, install the native dependencies with:
 
@@ -137,6 +175,9 @@ npm run tauri -- build --bundles appimage,deb,rpm
 Artifacts are written below `app/src-tauri/target/release/bundle/`. The first
 build can take a while because Cargo compiles YARA-X and its dependencies from
 source.
+
+Windows build setup, installer behavior, and filesystem limitations are described
+in [Windows development](docs/windows.md).
 
 ## Develop and test
 
@@ -186,7 +227,8 @@ value when it names packages and reports the running version.
 
 ## Current limitations
 
-- Only Linux x86-64 packages are supported initially.
+- Packages target Linux and Windows x86-64; native ARM64 and macOS packages are
+  not yet available.
 - Quipu scans one selected file or one text buffer at a time, not directories
   or batches.
 - New rules are created at the workspace root. Move and delete operations are

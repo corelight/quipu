@@ -663,7 +663,7 @@ Committing by rename has consequences, all of them the price of that guarantee: 
 
 That moment between the exchange and the restore is an interval like any other, and putting a version back has exactly the problem writing one had: something may write the file again in there, and a plain rename back would destroy that version to make room for one nobody asked to see. So the restore is an exchange as well, and what it hands back is what decides. If it is the replacement this save installed, nothing else wrote and the displaced version is home. If it is anything else, a competing version has been taken out of the way rather than overwritten: a second exchange puts it back, the displaced version stays in the temporary beside it, and the save fails with an error naming that file - the only recovery there is once two versions exist and one path. Which is what removing the temporary is conditional on, and the two sides of the save answer that differently because they are authorised differently. A **committed** save has just replaced exactly the bytes it was told to replace, compared at the instant of the swap, so the file it swapped through may go: the inode that goes with it is the one the save was authorised to replace, which is the hard-link consequence stated above rather than a second one. A **refused** save has no such authorisation, so what it removes has to be *shown* to be its own - and byte equality does not show that. The save still holds the file it wrote its replacement into, open, so the proof is that the temporary's name still resolves to that same file - device and inode, against the open handle - *and* that reading it back through that handle yields the replacement. A third party's atomic replacement carrying exactly the replacement's bytes fails the first half; an in-place write into Quipu's own file, which the exchange has just left at the path where anything may write to it, fails the second. Anything not proven is somebody else's, and stays on disk named in the error.
 
-Where the platform or the filesystem has no exchange there is no conditional replacement to fall back on, so a save over an existing version is not committed at all and fails saying so. Some FUSE and network filesystems reach that branch on Linux and macOS too, so it is not only other platforms. A comparison followed by a rename is precisely the unconditional clobber all of this exists to avoid: it would still be atomic for anything reading the path and would still destroy a version nobody had seen, which is the bug rather than a mitigation of it. Being unable to save is a disappointment; overwriting an unseen version is not recoverable. Re-creating a file the caller expects to be absent needs no exchange and is unaffected, because `create_new` carries its own refusal.
+On Unix, where the platform or the filesystem has no exchange there is no conditional replacement to fall back on, so a save over an existing version is not committed at all and fails saying so. Some FUSE and network filesystems reach that branch on Linux and macOS too, so it is not only other platforms. A comparison followed by a rename is precisely the unconditional clobber all of this exists to avoid: it would still be atomic for anything reading the path and would still destroy a version nobody had seen, which is the bug rather than a mitigation of it. Being unable to save is a disappointment; overwriting an unseen version is not recoverable. Re-creating a file the caller expects to be absent needs no exchange and is unaffected, because `create_new` carries its own refusal.
 
 ##### Every version, at every boundary
 
@@ -1066,7 +1066,7 @@ The first open of an example copies the packaged tree recursively into that vers
 
 The copy is committed rather than assembled in place, so that an interrupted one cannot be left looking finished. Every attempt claims a staging directory of its own beside the destination - a name carrying the process id and a counter, claimed by `create_dir`, which fails rather than joining in if the name is taken - copies the template into it, writes the marker file last, and only then moves the completed tree onto `v<revision>` with an **atomic no-replace rename**. The destination is therefore only ever absent or complete, and the marker inside it is what a reuse tests for. It has to be a regular file, checked without following links, so nothing outside the directory can decide whether it counts as a working copy.
 
-No-replace is the load-bearing half of that, and atomicity alone would not do: an ordinary Unix rename replaces an existing *empty* directory, so a check followed by a plain rename would still destroy a directory that appeared in the window between the two. The refusal therefore comes from the rename itself - `renameat2` with `RENAME_NOREPLACE` on Linux, `renamex_np` with `RENAME_EXCL` on macOS, both reached through `rustix` rather than Quipu's own FFI. A platform offering neither gets an explicit refusal to install, because there is no safe substitute: failing to open an example is a disappointment, and replacing somebody's directory is not.
+No-replace is the load-bearing half of that, and atomicity alone would not do: an ordinary Unix rename replaces an existing *empty* directory, so a check followed by a plain rename would still destroy a directory that appeared in the window between the two. The refusal therefore comes from the rename itself - `renameat2` with `RENAME_NOREPLACE` on Linux, `renamex_np` with `RENAME_EXCL` on macOS, both reached through `rustix`; Windows uses `MoveFileExW` with replacement disabled. A platform offering no no-replace operation gets an explicit refusal to install, because there is no safe substitute: failing to open an example is a disappointment, and replacing somebody's directory is not.
 
 Two attempts - two windows, two processes - meet nowhere but that rename. Whichever wins installs its copy; the loser reuses the winner's only after checking that what is there really is a marked working copy, and otherwise reports a refusal. Nothing is ever deleted or replaced to make room. A destination without an acceptable marker is *not* interrupted-copy debris - a copy in progress never has that name - so it is somebody's: a restored backup, a directory they created, or a working copy whose marker has gone. It is preserved exactly as it stands and the preparation fails saying which directory Quipu refused to replace and why. An attempt that dies leaves its own staging directory behind, and that is deliberate: the debris is inert and uniquely named, whereas deleting a staging directory this attempt does not own could destroy a copy another one is still making. Bounded cleanup of stale orphans can be designed separately.
 
@@ -1098,3 +1098,26 @@ Deferred, in rough dependency order:
 
 - **Caching.** Hashing plans and storing compiled rules, per `docs/compiled-rules-cache-design.md`. Nothing in Phase 5 hashes anything, and the watcher's notices are not a cache-invalidation signal.
 - **Manifest authoring UI.** Nothing writes `quipu.toml`; it is hand-written and committed by the user.
+
+## Windows filesystem behavior
+
+Windows conditional saves use an exclusive read/write handle with sharing disabled
+from the version comparison through the final flush. An incompatible open handle
+causes Save to fail before changing bytes. The version read from that handle must
+match the caller's expected text; an absent expected file is refused, while a file
+expected to be absent is created with `CREATE_NEW`. Readers, writers, deletes and
+renames cannot open the existing file while the save owns the handle. Writable
+memory mappings that outlive their original handles are outside this guarantee.
+
+Before modifying an existing file, Quipu creates and flushes a recovery copy in
+the same directory, copying the original DACL before writing any bytes to it.
+The file is updated in place, so its identity, ACL and hard links are preserved.
+A write or flush failure triggers restoration through the still-exclusive handle.
+If restoration fails, the original stays in the recovery file and the error names
+it. A process crash can leave a partial rule and a `.NAME.quipuPID-N.tmp` recovery
+file; recovery is manual, and startup never deletes those files. This differs
+from the Unix exchange implementation's atomic visibility.
+
+Windows renames use `MoveFileExW` with flags zero: destination replacement and
+cross-volume copy/delete fallback are both disabled. The same operation installs
+example directories, so an existing directory is preserved even when empty.

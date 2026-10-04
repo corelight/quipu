@@ -18,13 +18,17 @@
 //! Both intervals, and each thing an outsider can do in either, are enumerated in
 //! `docs/workspace-project-model.md`; the rows there are driven one at a time.
 
+#[cfg(not(windows))]
 use std::cell::Cell;
+#[cfg(not(windows))]
 use std::io::ErrorKind;
 use std::path::Path;
 
 use crate::testing::Fixture;
 
-use super::{Saved, Seams};
+use super::Saved;
+#[cfg(not(windows))]
+use super::Seams;
 
 fn text(path: &Path) -> String {
     std::fs::read_to_string(path).expect("read the file back")
@@ -43,6 +47,7 @@ fn save(path: &Path, contents: &str, expect: Option<&str>) -> Saved {
 /// A save with `compared` run between the comparison and the commit, and `exchanged`
 /// between the commit and the restore. The real exchange, so what a competing writer
 /// finds is a real one.
+#[cfg(not(windows))]
 fn racing(
     path: &Path,
     contents: &str,
@@ -65,6 +70,7 @@ fn racing(
 /// A competing save of the same shape as Quipu's own - written beside the file and
 /// committed over it - so that the version which ends up at a path can be told apart
 /// from a copy of its bytes.
+#[cfg(not(windows))]
 fn write_over(path: &Path, contents: &str) {
     let mut beside = path.as_os_str().to_owned();
     beside.push(".theirs");
@@ -98,6 +104,7 @@ fn entries(dir: &Path) -> Vec<String> {
 }
 
 /// The files a save committed through and did not remove, by name.
+#[cfg(not(windows))]
 fn leftovers(dir: &Path) -> Vec<String> {
     entries(dir)
         .into_iter()
@@ -284,6 +291,7 @@ fn saving_refuses_when_the_file_it_expected_has_gone() {
 }
 
 #[test]
+#[cfg(not(windows))]
 fn saving_preserves_a_version_written_after_the_comparison() {
     let fixture = Fixture::new();
     fixture.write("main.yar", "before\n");
@@ -338,6 +346,7 @@ fn refusing_a_save_puts_the_competing_file_back_rather_than_a_copy_of_it() {
 }
 
 #[test]
+#[cfg(not(windows))]
 fn saving_refuses_a_file_created_after_the_comparison() {
     let fixture = Fixture::new();
     let path = fixture.root.join("deleted.yar");
@@ -392,6 +401,7 @@ fn saving_replaces_a_version_installed_after_the_comparison_that_holds_what_it_e
 }
 
 #[test]
+#[cfg(not(windows))]
 fn saving_refuses_when_the_file_is_deleted_after_the_comparison() {
     let fixture = Fixture::new();
     fixture.write("main.yar", "before\n");
@@ -534,6 +544,7 @@ fn a_write_into_the_file_a_save_committed_through_is_put_back_rather_than_remove
 }
 
 #[test]
+#[cfg(not(windows))]
 fn a_deletion_before_the_restore_puts_the_displaced_version_back() {
     let fixture = Fixture::new();
     fixture.write("main.yar", "before\n");
@@ -558,6 +569,7 @@ fn a_deletion_before_the_restore_puts_the_displaced_version_back() {
 }
 
 #[test]
+#[cfg(not(windows))]
 fn a_path_taken_before_the_displaced_version_can_go_home_keeps_it_beside_the_file() {
     let fixture = Fixture::new();
     fixture.write("main.yar", "before\n");
@@ -596,6 +608,7 @@ fn a_path_taken_before_the_displaced_version_can_go_home_keeps_it_beside_the_fil
 }
 
 #[test]
+#[cfg(not(windows))]
 fn a_restore_that_cannot_run_keeps_the_displaced_version_rather_than_tidying_it_away() {
     let fixture = Fixture::new();
     fixture.write("main.yar", "before\n");

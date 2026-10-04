@@ -97,6 +97,18 @@ class Driver:
     def close(self) -> None:
         self.d.close()
 
+    def request_close(self, window: WindowInfo) -> None:
+        """Send the window manager's close request without bypassing app guards."""
+        from Xlib.protocol import event
+
+        native = self.d.create_resource_object("window", window.id)
+        native.send_event(event.ClientMessage(
+            window=window.id,
+            client_type=self.d.intern_atom("WM_PROTOCOLS"),
+            data=(32, [self.d.intern_atom("WM_DELETE_WINDOW"), X.CurrentTime, 0, 0, 0]),
+        ))
+        self.d.flush()
+
     # ---- input ----
 
     def move(self, x: int, y: int) -> None:
@@ -257,6 +269,9 @@ class Driver:
             w
             for w in self.toplevels()
             if w.id != main.id and w.width * w.height >= min_area and w.width < main.width
+            # An auxiliary application window can also be smaller than main.
+            # Only menus bypass the window manager (override_redirect).
+            and self.d.create_resource_object("window", w.id).get_attributes().override_redirect
         ]
         if not cands:
             return None

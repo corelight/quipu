@@ -72,8 +72,12 @@ enum Navigation {
 }
 
 /// Opens one of the two fixed entry points in the singleton help window.
+// Keep this command async: WebView2 creation from a synchronous IPC handler
+// deadlocks the Windows UI thread, leaving the new window blank and preventing
+// every window (including main) from processing close requests. Tauri dispatches
+// async commands on its runtime instead of inside the native event callback.
 #[tauri::command]
-pub fn show_help(app: AppHandle, page: HelpPage) -> Result<(), String> {
+pub async fn show_help(app: AppHandle, page: HelpPage) -> Result<(), String> {
     let target = page_url(&app, page)?;
 
     if let Some(window) = app.get_webview_window(LABEL) {

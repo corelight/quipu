@@ -14,8 +14,9 @@ feature ideas, documentation, testing, design feedback, and code.
 
 ## Development setup
 
-Quipu currently supports development on 64-bit Linux. Install the prerequisites
-and native libraries listed in [README.md](README.md#build-from-source), then:
+Development can happen on Linux or Windows x86-64. Install the prerequisites
+in [README.md](README.md#build-from-source) for Linux or
+[Windows development](docs/windows.md#build-locally-on-windows) for Windows, then:
 
 ```bash
 cd app
@@ -29,7 +30,21 @@ dependencies from source.
 ## Required checks
 
 Run the checks relevant to your change. Before requesting review, a complete
-code change should pass:
+code change should pass the checks below.
+
+Set the YARA-X build environment first. In Bash:
+
+```bash
+export YRX_REGENERATE_MODULES_RS=false
+```
+
+Or in PowerShell:
+
+```powershell
+$env:YRX_REGENERATE_MODULES_RS = 'false'
+```
+
+Then run these commands in either shell, starting at the repository root:
 
 ```bash
 cd app
@@ -38,15 +53,21 @@ npm run build
 
 cd src-tauri
 cargo fmt --all -- --check
-YRX_REGENERATE_MODULES_RS=false cargo clippy --all-targets --locked -- -D warnings
-YRX_REGENERATE_MODULES_RS=false cargo test --locked
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+```
 
-cd ../..
+On Linux, also run the UI harness unit tests from the repository root:
+
+```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test/ui -p '*_test.py' -v
 ```
 
-The native-menu acceptance suite has extra display-server requirements and can
-be run selectively for affected UI work. See [test/README.md](test/README.md).
+The native-menu acceptance suite runs on Linux, has extra display-server
+requirements, and can be run selectively for affected UI work. See
+[test/README.md](test/README.md). Windows contributors can rely on CI for the
+Linux harness checks, but should manually exercise affected Windows UI behavior
+using the [Windows validation checklist](docs/windows.md#validation-status).
 
 If a Cargo or npm lockfile changes, install
 [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) 0.9.2 and refresh

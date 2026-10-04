@@ -2519,13 +2519,57 @@ fn drain_until(rx: &Receiver<WatchNotice>, needle: &str) -> Vec<WatchNotice> {
     }
 }
 
-/// Narrowing a REAL watcher, arranged so that only the unwatch can decide the answer.
-///
-/// The dropped target is a directory nested inside one the instance keeps. Its events
-/// pass the filter - the kept directory is their ancestor, and a `.yar` write is
-/// relevant under any plan - so nothing but the OS having stopped delivering them can
-/// make them absent. A non-recursive watch on the parent does not report writes inside
-/// a subdirectory, so the parent's surviving watch cannot stand in for the one dropped.
+/// Windows unwatch is asynchronous: late events from the removed nested watch
+/// must be rejected even though its parent is still watched non-recursively.
+#[test]
+fn narrowed_directory_rejects_late_descendant_events_but_keeps_its_entries() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", "include \"../shared/ext.yar\"\n");
+    fixture.write_outside("shared/ext.yar", "include \"nested/deep.yar\"\n");
+    fixture.write_outside("shared/nested/deep.yar", &rule("deep"));
+    let plan = Arc::new(plan_for(&fixture));
+    let nested = fixture.base.join("shared").join("nested");
+    let deep = nested.join("deep.yar");
+    let (tx, rx) = std::sync::mpsc::channel();
+    let (mut instance, _gate, route) = native::inert(
+        Arc::clone(&plan),
+        plan.targets().to_vec(),
+        false,
+        Box::new(move |signal| tx.send(signal).unwrap()),
+    );
+    route(written(&deep));
+    assert!(matches!(rx.try_recv(), Ok(Signal::Changed(paths)) if paths == vec![deep.clone()]));
+
+    let kept: Vec<_> = plan
+        .targets()
+        .iter()
+        .filter(|t| t.path != nested)
+        .cloned()
+        .collect();
+    instance.narrow(plan, &kept);
+    // Model a callback delivered after unwatch returns, without a timing race.
+    route(written(&deep));
+    route(appeared(&deep));
+    assert!(
+        rx.try_recv().is_err(),
+        "removed nested watch must be silent"
+    );
+
+    // A directory watch still covers itself and direct entries, including a
+    // subdirectory being removed/renamed. The recursive project watch keeps depth.
+    for path in [
+        fixture.base.join("shared"),
+        fixture.base.join("shared").join("ext.yar"),
+        nested,
+        fixture.root.join("nested").join("deep.yar"),
+    ] {
+        route(appeared(&path));
+        assert!(matches!(rx.try_recv(), Ok(Signal::Changed(paths)) if paths == vec![path]));
+    }
+}
+
+/// Narrowing a real watcher keeps its remaining locations delivering while
+/// filtering any late events from a removed nested watch.
 #[test]
 fn narrowing_a_real_instance_keeps_delivering_what_it_is_kept_for() {
     let fixture = Fixture::new();
@@ -2568,25 +2612,25 @@ fn narrowing_a_real_instance_keeps_delivering_what_it_is_kept_for() {
     // others carry on, as the deliveries below then demonstrate.
     assert_eq!(interrupted, cfg!(target_os = "macos"));
 
-    // Written first, so that an instance still watching it would have queued its event
-    // ahead of the ones below: a single instance delivers from one queue, in order.
+    // These directories have separate OS watches; their callbacks need not arrive
+    // in write order. Wait for both retained locations below.
     fixture.write_outside("shared/nested/deep.yar", &rule("deeper"));
     fixture.write_outside("shared/ext.yar", "include \"nested/deep.yar\"\n\n");
     fixture.write("added.yar", &rule("added"));
 
     let mut reported: Vec<String> = Vec::new();
-    loop {
+    let mut saw_project = false;
+    let mut saw_external = false;
+    while !saw_project || !saw_external {
         match rx
             .recv_timeout(DELIVERY)
-            .unwrap_or_else(|e| panic!("waiting for added.yar: {e}; saw {reported:?}"))
+            .unwrap_or_else(|e| panic!("waiting for retained locations: {e}; saw {reported:?}"))
         {
             Signal::Changed(paths) => {
                 let named: Vec<String> = paths.iter().map(|p| p.display().to_string()).collect();
-                let arrived = named.iter().any(|path| path.contains("added.yar"));
+                saw_project |= named.iter().any(|path| path.contains("added.yar"));
+                saw_external |= named.iter().any(|path| path.contains("ext.yar"));
                 reported.extend(named);
-                if arrived {
-                    break;
-                }
             }
             Signal::Failed(message) => panic!("the watcher failed: {message}"),
         }

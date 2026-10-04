@@ -32,8 +32,9 @@ body:
   - type: input
     id: system
     attributes:
-      label: Linux distribution and version
-      placeholder: Ubuntu 24.04
+      label: Operating system, version, and architecture
+      description: On Windows, include the version and build shown by winver. On Linux, include the distribution and version.
+      placeholder: Windows 11 24H2 (build 26100, x64), or Ubuntu 24.04 (x86-64)
     validations:
       required: true
 
@@ -45,6 +46,8 @@ body:
         - AppImage
         - DEB
         - RPM
+        - Windows NSIS installer (.exe)
+        - Windows MSI installer (.msi)
         - Built from source
     validations:
       required: true

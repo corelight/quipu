@@ -20,6 +20,9 @@
 //! in the order the user asked for them (see `app/src/mutations.ts`), so the last
 //! gesture is the last write.
 //!
+//! On Windows, saves use an exclusive read/write handle and a flushed recovery
+//! copy; see `fs/windows.rs`. The exchange and rollback described below apply to Unix.
+//!
 //! # A save is conditional on the version it was authorised against
 //!
 //! Overwriting is what Save means, but overwriting *what* is not the caller's to
@@ -93,13 +96,21 @@
 //! Recreating a file the caller expects to be absent needs no exchange and is
 //! unaffected: [`create_new`] carries its own refusal.
 
-use std::io::{ErrorKind, Read, Seek, Write};
+use std::io::ErrorKind;
+#[cfg(not(windows))]
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
 
+#[cfg(not(windows))]
 use crate::project::escaped;
+
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub(crate) use windows::save as save_if_unchanged;
 
 #[cfg(test)]
 mod tests;
@@ -159,6 +170,7 @@ pub fn rename_file(from: String, to: String) -> Result<(), String> {
 /// which refuses cheaply and without ever putting the new text where a reader could
 /// see it, and once inside [`install`], against the version the commit itself
 /// displaced. Only the second can speak for the instant of the write.
+#[cfg(not(windows))]
 pub(crate) fn save_if_unchanged(
     path: &Path,
     contents: &str,
@@ -183,6 +195,7 @@ pub(crate) fn save_if_unchanged(
 /// about what happens when something else writes *in between*, and a test that cannot
 /// write in between cannot tell a commit that decides from a comparison that merely
 /// looks.
+#[cfg(not(windows))]
 struct Seams<'a> {
     /// Runs after the comparison, before the commit.
     compared: &'a dyn Fn(),
@@ -195,6 +208,7 @@ struct Seams<'a> {
 }
 
 /// [`save_if_unchanged`], with the [`Seams`] a test writes through.
+#[cfg(not(windows))]
 fn commit(
     path: &Path,
     contents: &str,
@@ -230,6 +244,7 @@ fn commit(
 
 /// Installs `contents` over a file believed to hold `want`, and leaves nothing of
 /// Quipu's own beside it either way.
+#[cfg(not(windows))]
 fn exchange_in(
     path: &Path,
     contents: &str,
@@ -251,6 +266,7 @@ fn exchange_in(
 }
 
 /// Whose version the file a save committed through is left holding.
+#[cfg(not(windows))]
 enum Leftover {
     /// Text this save wrote, or the very version it was authorised to replace. Shown
     /// rather than assumed: either the file has never been anywhere but beside `path`, or
@@ -269,6 +285,7 @@ enum Leftover {
 ///
 /// `file` stays open throughout, past the write it is here for: it is what a refused
 /// save's restore proves the temporary against, and a name cannot stand in for it.
+#[cfg(not(windows))]
 fn install(
     temp: &Path,
     file: &mut std::fs::File,
@@ -336,6 +353,7 @@ fn install(
 }
 
 /// What became of the version a refused save displaced.
+#[cfg(not(windows))]
 enum Restored {
     /// It is back at `path`, and nothing that is not this save's own is left in `temp`.
     Put,
@@ -359,6 +377,7 @@ enum Restored {
 /// Both halves are needed and neither will do alone; see the module documentation. An
 /// error where either proof should be is a failed proof, which costs a file left on disk
 /// where mistaking one for Quipu's own costs a version nobody can get back.
+#[cfg(not(windows))]
 fn restore(
     temp: &Path,
     path: &Path,
@@ -415,6 +434,7 @@ fn restore(
 /// identity calls Quipu's own file its own after somebody has written into it - which the
 /// exchange has just made possible by putting it at `path`, where anything may - and
 /// unlinks their version with it.
+#[cfg(not(windows))]
 fn is_ours(temp: &Path, file: &std::fs::File, ours: &[u8]) -> bool {
     same_file(temp, file) && holds(file, ours)
 }
@@ -435,7 +455,7 @@ fn same_file(temp: &Path, file: &std::fs::File) -> bool {
 /// A platform with no stable file identity to compare has no atomic exchange either, so
 /// nothing gets this far: the save is refused before anything is written and there is no
 /// temporary to account for.
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 fn same_file(_temp: &Path, _file: &std::fs::File) -> bool {
     false
 }
@@ -444,6 +464,7 @@ fn same_file(_temp: &Path, _file: &std::fs::File) -> bool {
 ///
 /// Read back through the handle rather than through the name, which has been through two
 /// renames since and is not what is being asked about.
+#[cfg(not(windows))]
 fn holds(file: &std::fs::File, ours: &[u8]) -> bool {
     let mut handle = file;
     let mut back = Vec::with_capacity(ours.len());
@@ -455,6 +476,7 @@ fn holds(file: &std::fs::File, ours: &[u8]) -> bool {
 /// Bytes rather than text: a file the editor could not have read is not a version this
 /// save was authorised against, and comparing bytes says so without having to decide
 /// what invalid UTF-8 would have meant.
+#[cfg(not(windows))]
 fn read_optional(path: &Path) -> std::io::Result<Option<Vec<u8>>> {
     match std::fs::read(path) {
         Ok(bytes) => Ok(Some(bytes)),
@@ -491,7 +513,18 @@ fn temp_beside(path: &Path) -> std::io::Result<(PathBuf, std::fs::File)> {
             TEMPS.fetch_add(1, Ordering::Relaxed)
         ));
         let temp = dir.join(candidate);
-        match std::fs::File::create_new(&temp) {
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true).create_new(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
+            use windows_sys::Win32::Storage::FileSystem::WRITE_DAC;
+            options
+                .share_mode(0)
+                .access_mode(GENERIC_READ | GENERIC_WRITE | WRITE_DAC);
+        }
+        match options.open(&temp) {
             Ok(file) => return Ok((temp, file)),
             Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
             Err(err) => return Err(err),
@@ -505,6 +538,7 @@ fn temp_beside(path: &Path) -> std::io::Result<(PathBuf, std::fs::File)> {
 
 /// Whether an exchange failed because there is no exchange to be had, rather than
 /// because this one could not be done.
+#[cfg(not(windows))]
 fn unsupported(err: &std::io::Error) -> bool {
     matches!(err.kind(), ErrorKind::Unsupported | ErrorKind::InvalidInput)
 }
@@ -525,7 +559,7 @@ fn exchange(from: &Path, to: &Path) -> std::io::Result<()> {
     .map_err(std::io::Error::from)
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 fn exchange(_from: &Path, _to: &Path) -> std::io::Result<()> {
     Err(std::io::Error::new(
         ErrorKind::Unsupported,
@@ -538,7 +572,15 @@ fn exchange(_from: &Path, _to: &Path) -> std::io::Result<()> {
 /// One operation: the creation carries the refusal with it, so nothing that appears
 /// while it runs can be truncated by it.
 pub(crate) fn create_new(path: &Path) -> std::io::Result<()> {
-    std::fs::File::create_new(path).map(|_| ())
+    std::fs::File::create_new(path).map(|_| ()).map_err(|err| {
+        // Windows reports AccessDenied for CREATE_NEW over a directory. This only
+        // classifies an already failed operation; it never authorises a write.
+        if cfg!(windows) && err.kind() == ErrorKind::PermissionDenied && path.exists() {
+            std::io::Error::from(ErrorKind::AlreadyExists)
+        } else {
+            err
+        }
+    })
 }
 
 /// Renames `from` to `to`, failing rather than replacing anything already there.
@@ -566,7 +608,7 @@ pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> std::io::Result<()> {
     .map_err(std::io::Error::from)
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub(crate) fn rename_noreplace(_from: &Path, _to: &Path) -> std::io::Result<()> {
     Err(std::io::Error::new(
         ErrorKind::Unsupported,
@@ -585,3 +627,6 @@ fn about(path: &str, err: &std::io::Error) -> String {
         format!("{path}: {err}")
     }
 }
+
+#[cfg(windows)]
+pub(crate) use windows::rename_noreplace;

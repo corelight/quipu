@@ -58,6 +58,15 @@ Choose **File → Save** or press <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<
 
 **Compile Workspace** also saves modified project sources before invoking the compiler. If several project files are dirty, Quipu treats them as one compile-time save operation.
 
+On Windows, another program holding the file open can prevent a save. Close that
+file in the other program and retry. Quipu keeps your unsaved text in the editor.
+
+If Quipu crashes during a Windows save, a recovery file named
+`.NAME.quipuPID-N.tmp` may remain beside the rule. It contains the version from
+before the save. Preserve both files and inspect the recovery copy before
+restoring it. If a failed save cannot restore the original automatically, its
+error message gives the recovery file's location.
+
 ## Changes made outside Quipu
 
 When an open file changes on disk, Quipu preserves the text already in the editor and marks the conflict instead of silently replacing either version.

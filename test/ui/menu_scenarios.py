@@ -499,8 +499,10 @@ def preferences_dialog(artifacts: Path, server: str, mode: str) -> None:
         profile.close()
 
 
-def documentation_window(artifacts: Path, server: str, mode: str) -> None:
-    """Bundled Documentation loads and its Quick Start stays in one window.
+def documentation_window(
+    artifacts: Path, server: str, mode: str, *, native_exit: bool = False
+) -> None:
+    """Bundled help loads, navigates, closes, reopens and permits application quit.
 
     The native window title names the selected fixed entry point, while the
     generated-site build check proves each entry point exists. Keeping the same
@@ -552,6 +554,39 @@ def documentation_window(artifacts: Path, server: str, mode: str) -> None:
             f"0x{quick_start.id:x}; expected one singleton"
         )
         print("  both bundled pages loaded in one documentation window")
+
+        def await_closed(*ids: int) -> None:
+            deadline = time.time() + 10.0
+            while time.time() < deadline:
+                if not any(window.id in ids for window in drv.toplevels()):
+                    return
+                time.sleep(0.2)
+            raise AssertionError(f"windows did not close: {ids}")
+
+        # A title alone cannot prove that the event loop is still alive. Exercise
+        # the native close request, then rebuild the singleton from Quick Start.
+        drv.request_close(quick_start)
+        await_closed(quick_start.id)
+        assert any(window.id == main.id for window in drv.toplevels()), (
+            "closing documentation also closed the main window"
+        )
+        Menu(drv, main).activate("Help", LABEL_INDEX["help.quick-start"], settle=1.0)
+        reopened = await_named("Quick Start — Quipu Documentation")
+
+        # Both application exit gestures must get through the main close guard
+        # with help still open. No unsaved work exists in this session.
+        if native_exit:
+            drv.request_close(main)
+        else:
+            Menu(drv, main).activate("File", LABEL_INDEX["file.quit"], settle=1.0)
+        await_closed(main.id, reopened.id)
+        gesture = "native main close" if native_exit else "File > Quit"
+        print(f"  native help close, Quick Start reopen and {gesture} all respond")
+
+
+def documentation_native_close(artifacts: Path, server: str, mode: str) -> None:
+    """The native main close request also works with documentation open."""
+    documentation_window(artifacts, server, mode, native_exit=True)
 
 
 # ---- helpers ----
@@ -1401,6 +1436,7 @@ LIFECYCLE_SCENARIOS = {
     "close_workspace_confirms_discard": close_workspace_confirms_discard,
     "preferences_dialog": preferences_dialog,
     "documentation_window": documentation_window,
+    "documentation_native_close": documentation_native_close,
 }
 
 
