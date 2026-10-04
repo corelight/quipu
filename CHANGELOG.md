@@ -9,6 +9,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-04
+
 ### Added
 
 - Windows x86-64 builds with NSIS and MSI installers and WebView2 runtime setup.
@@ -40,5 +42,6 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bundled example projects and offline documentation.
 - A bounded compiled-rules cache.
 
-[Unreleased]: https://github.com/corelight/quipu/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/corelight/quipu/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/corelight/quipu/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/corelight/quipu/releases/tag/v0.2.0
