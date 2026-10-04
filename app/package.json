@@ -1,7 +1,7 @@
 {
   "name": "quipu",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A desktop workbench for writing, validating, compiling, and testing YARA rules.",
   "license": "BSD-3-Clause",
   "homepage": "https://github.com/corelight/quipu",

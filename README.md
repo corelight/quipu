@@ -70,11 +70,10 @@ signature.
 
 ## Install on Windows
 
-Windows x86-64 installers are built by
-[GitHub Actions](https://github.com/corelight/quipu/actions/workflows/ci.yml).
-Until the first release containing Windows packages, download the
-`quipu-windows-x86_64` artifact from a successful workflow run and extract it.
-The published v0.2.0 release contains Linux packages only.
+For Windows x86-64 packages (v0.3.0 and later), download an installer from
+[GitHub Releases](https://github.com/corelight/quipu/releases).
+Development builds are also available as `quipu-windows-x86_64` artifacts from
+successful [CI runs](https://github.com/corelight/quipu/actions/workflows/ci.yml).
 
 - Use the NSIS `.exe` installer for a current-user installation.
 - An MSI `.msi` installer is also available.
