@@ -73,11 +73,20 @@ Three filesystem fixtures that create non-UTF-8 filenames are ignored on macOS
 because APFS rejects those names with `EILSEQ`. They still run on Linux; the
 in-memory non-Unicode path identity test also runs on macOS.
 
-Native CI has passed Clippy and 296 Rust tests on both architectures and produced
-ad-hoc signed apps and DMGs. Final package validation is pending a follow-up run
-to accept the embedded BSD license when mounting the DMG noninteractively.
-Interactive desktop validation is also pending; a successful package build does not establish full
-macOS support. On each architecture, check:
+The [CI run for `b6d8ce6`](https://github.com/corelight/quipu/actions/runs/37238997361)
+passed on both macOS architectures: frontend tests, Clippy, 296 Rust tests,
+release app and DMG builds, and all package checks. Four Rust tests are ignored:
+the three APFS-incompatible fixtures above and the existing manual cache measurement.
+Both downloaded DMGs also passed their `SHA256SUMS` checks. Linux and Windows
+checks passed in the same run.
+
+Artifacts from that run (retained for 14 days):
+
+- [Apple Silicon DMG and checksum](https://github.com/corelight/quipu/actions/runs/37238997361/artifacts/11316970888)
+- [Intel DMG and checksum](https://github.com/corelight/quipu/actions/runs/37238997361/artifacts/11317565965)
+
+Interactive desktop validation is pending; a successful package build does not
+establish full macOS support. On each architecture, check:
 
 - Install from a downloaded DMG, launch through Gatekeeper, and reopen the app.
 - Open bundled examples, compile rules, scan text and files, and restore a
