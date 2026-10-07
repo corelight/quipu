@@ -13,7 +13,7 @@
     "url": "https://github.com/corelight/quipu/issues"
   },
   "engines": {
-    "node": ">=22.6"
+    "node": ">=22.12"
   },
   "type": "module",
   "scripts": {

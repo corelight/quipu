@@ -12,7 +12,7 @@ uses the same Windows job, waits for both platforms, and generates one combined
 
 Install Visual Studio 2022 Build Tools with **Desktop development with C++** and
 the Windows SDK, Rust 1.93 or newer with the `x86_64-pc-windows-msvc` toolchain,
-Node.js 22.6 or newer, Git, and Zola 0.23.6 on `PATH`. MSI packaging requires the
+Node.js 22.12 or newer, Git, and Zola 0.23.6 on `PATH`. MSI packaging requires the
 Windows **VBSCRIPT** optional feature. Tauri downloads its installer toolchains
 on the first build. Install the Evergreen WebView2 runtime for development.
 
