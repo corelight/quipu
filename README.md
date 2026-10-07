@@ -21,7 +21,8 @@ server, so you do not need a separate YARA installation.
 > Quipu is at MVP stage. Builds target Linux and Windows x86-64.
 > Windows desktop validation covers Windows 11 24H2; see the
 > [validation record](docs/windows.md#validation-status).
-> [Experimental macOS builds](docs/macos.md) are being validated separately.
+> [Experimental macOS builds](docs/macos.md) have CI coverage and user-confirmed
+> build validation; see the [validation record](docs/macos.md#validation-status).
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
 
@@ -238,7 +239,8 @@ value when it names packages and reports the running version.
 ## Current limitations
 
 - Release packages target Linux and Windows x86-64. macOS Apple Silicon and Intel
-  builds are experimental CI artifacts; desktop validation is pending.
+  builds remain experimental CI artifacts; see the
+  [macOS validation record](docs/macos.md#validation-status).
 - Quipu scans one selected file or one text buffer at a time, not directories
   or batches.
 - New rules are created at the workspace root. Move and delete operations are

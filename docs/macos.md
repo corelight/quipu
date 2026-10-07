@@ -85,8 +85,12 @@ Artifacts from that run (retained for 14 days):
 - [Apple Silicon DMG and checksum](https://github.com/corelight/quipu/actions/runs/37238997361/artifacts/11316970888)
 - [Intel DMG and checksum](https://github.com/corelight/quipu/actions/runs/37238997361/artifacts/11317565965)
 
-Interactive desktop validation is pending; a successful package build does not
-establish full macOS support. On each architecture, check:
+The user confirmed macOS build validation on 2026-10-07. The tested hardware,
+OS version, and individual checklist results were not recorded, so this does
+not establish desktop coverage for both architectures. The packages remain
+experimental CI artifacts.
+
+For future desktop regression checks on each architecture:
 
 - Install from a downloaded DMG, launch through Gatekeeper, and reopen the app.
 - Open bundled examples, compile rules, scan text and files, and restore a
