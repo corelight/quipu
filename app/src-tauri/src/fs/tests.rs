@@ -30,6 +30,18 @@ use super::Saved;
 #[cfg(not(windows))]
 use super::Seams;
 
+fn watchers() -> crate::watch::Watchers {
+    crate::watch::Watchers::new(std::sync::Arc::new(|_| {}))
+}
+
+fn create_file(path: String) -> Result<(), String> {
+    super::create_file_watched(path, &watchers())
+}
+
+fn rename_file(from: String, to: String) -> Result<(), String> {
+    super::rename_file_watched(from, to, &watchers())
+}
+
 fn text(path: &Path) -> String {
     std::fs::read_to_string(path).expect("read the file back")
 }
@@ -40,8 +52,13 @@ fn name(path: &Path) -> String {
 
 /// A save through the command, expecting `expect` on disk.
 fn save(path: &Path, contents: &str, expect: Option<&str>) -> Saved {
-    super::save_text_file(name(path), contents.to_string(), expect.map(str::to_string))
-        .expect("the save ran")
+    super::save_text_file_watched(
+        name(path),
+        contents.to_string(),
+        expect.map(str::to_string),
+        &watchers(),
+    )
+    .expect("the save ran")
 }
 
 /// A save with `compared` run between the comparison and the commit, and `exchanged`
@@ -117,7 +134,7 @@ fn creating_a_file_makes_it_empty() {
     let fixture = Fixture::new();
     let path = fixture.root.join("new.yar");
 
-    super::create_file(name(&path)).expect("created");
+    create_file(name(&path)).expect("created");
 
     assert_eq!(text(&path), "");
 }
@@ -128,7 +145,7 @@ fn creating_a_file_that_exists_refuses_rather_than_emptying_it() {
     fixture.write("main.yar", "rule main { condition: filesize > 0 }\n");
     let path = fixture.root.join("main.yar");
 
-    let err = super::create_file(name(&path)).expect_err("refused");
+    let err = create_file(name(&path)).expect_err("refused");
 
     assert!(err.contains("already exists"), "{err}");
     assert!(err.contains("main.yar"), "{err}");
@@ -144,7 +161,7 @@ fn creating_a_file_over_a_directory_refuses() {
     let path = fixture.root.join("nested");
     std::fs::create_dir(&path).expect("a directory in the way");
 
-    let err = super::create_file(name(&path)).expect_err("refused");
+    let err = create_file(name(&path)).expect_err("refused");
 
     assert!(err.contains("already exists"), "{err}");
     assert!(path.is_dir(), "the directory is still a directory");
@@ -155,7 +172,7 @@ fn creating_a_file_where_there_is_no_directory_reports_the_path() {
     let fixture = Fixture::new();
     let path = fixture.root.join("not/created/yet/new.yar");
 
-    let err = super::create_file(name(&path)).expect_err("no such directory");
+    let err = create_file(name(&path)).expect_err("no such directory");
 
     assert!(err.contains("new.yar"), "{err}");
     // Not the no-clobber refusal: an error that is not "something is there" says what
@@ -170,7 +187,7 @@ fn renaming_moves_the_file() {
     let from = fixture.root.join("main.yar");
     let to = fixture.root.join("renamed.yar");
 
-    super::rename_file(name(&from), name(&to)).expect("renamed");
+    rename_file(name(&from), name(&to)).expect("renamed");
 
     assert!(!from.exists(), "the old path is gone");
     assert!(text(&to).contains("rule main"), "{}", text(&to));
@@ -184,7 +201,7 @@ fn renaming_onto_an_existing_file_refuses_and_leaves_both() {
     let from = fixture.root.join("main.yar");
     let to = fixture.root.join("theirs.yar");
 
-    let err = super::rename_file(name(&from), name(&to)).expect_err("refused");
+    let err = rename_file(name(&from), name(&to)).expect_err("refused");
 
     assert!(err.contains("already exists"), "{err}");
     assert!(err.contains("theirs.yar"), "{err}");
@@ -202,7 +219,7 @@ fn renaming_onto_an_existing_directory_refuses() {
     let to = fixture.root.join("nested");
     std::fs::create_dir(&to).expect("a directory in the way");
 
-    let err = super::rename_file(name(&from), name(&to)).expect_err("refused");
+    let err = rename_file(name(&from), name(&to)).expect_err("refused");
 
     assert!(err.contains("already exists"), "{err}");
     assert!(to.is_dir(), "the directory is still a directory");
@@ -215,7 +232,7 @@ fn renaming_something_that_is_not_there_names_both_ends() {
     let from = fixture.root.join("gone.yar");
     let to = fixture.root.join("renamed.yar");
 
-    let err = super::rename_file(name(&from), name(&to)).expect_err("no such file");
+    let err = rename_file(name(&from), name(&to)).expect_err("no such file");
 
     assert!(err.contains("gone.yar"), "{err}");
     assert!(err.contains("renamed.yar"), "{err}");

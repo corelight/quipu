@@ -1,0 +1,118 @@
+name: macOS build
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  YRX_REGENERATE_MODULES_RS: "false"
+  MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+jobs:
+  build:
+    name: Test and package macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            arch: aarch64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@283fb51ee3c8a49cd7c8ff30102f3fcf3cfbe0e1 # 1.93.0
+        with:
+          targets: ${{ matrix.target }}
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: app/src-tauri
+          key: macos-${{ matrix.target }}
+          cache-on-failure: true
+
+      - name: Install Zola
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2
+        with:
+          tool: zola@0.23.6
+
+      - name: Install JavaScript dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: app
+        run: npm test
+
+      - name: Build frontend and offline documentation
+        working-directory: app
+        run: npm run build
+
+      - name: Lint Rust
+        working-directory: app/src-tauri
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Test Rust
+        working-directory: app/src-tauri
+        run: cargo test --locked
+
+      # FSEvents replay is timing-dependent; exercise the real save/re-arm path
+      # repeatedly on both architectures, including a subsequent external edit.
+      - name: Repeat native watcher regression
+        working-directory: app/src-tauri
+        run: |
+          for attempt in {1..5}; do
+            cargo test --locked watch::tests::a_real_watcher_delivers_changes_and_a_fence_stops_them -- --exact
+          done
+
+      # Ad-hoc signing needs no Apple account, certificate, or notarization secrets.
+      - name: Build ad-hoc signed app and DMG
+        working-directory: app
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: npm run tauri -- build --ci --target "$BUILD_TARGET" --bundles app,dmg -- --locked
+
+      - name: Validate DMG contents and app signature
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: bash app/scripts/validate-macos-packages.sh "$BUILD_TARGET"
+
+      - name: Collect packages and checksums
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          mkdir dist
+          cp app/src-tauri/target/"$BUILD_TARGET"/release/bundle/dmg/*.dmg dist/
+          cd dist
+          shasum -a 256 -- *.dmg > SHA256SUMS
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quipu-macos-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

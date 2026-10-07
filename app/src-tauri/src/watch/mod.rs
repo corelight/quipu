@@ -33,8 +33,11 @@
 //! Rule, the frontend fences: the current instance is retired and its callbacks
 //! made inert ([`Watchers::fence`]), the write happens, and the stored plan is
 //! re-armed ([`Watchers::rearm_after_fence`]). No timeout and no "ignore the next
-//! event" heuristic is involved - the events simply have no live watcher to arrive
-//! at.
+//! event" heuristic is involved. Retired callbacks are inert; on macOS a new
+//! FSEvents stream can still replay the write. Successful mutations therefore
+//! record content/presence receipts, and replayed paths are suppressed only while
+//! their current state matches. External edits and verification failures pass
+//! through. See [`own_writes`].
 //!
 //! # Nothing is retired before its replacement is live
 //!
@@ -241,6 +244,7 @@
 //! short list of paths for diagnostics, and never file contents.
 
 mod native;
+mod own_writes;
 mod plan;
 
 #[cfg(test)]
@@ -751,11 +755,27 @@ pub struct Watchers {
     notices: Arc<Notices>,
     armer: Armer,
     state: Mutex<State>,
+    own_writes: Arc<own_writes::OwnWrites>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct WriteScope {
+    subscription: u64,
+    // At least one fence already outstanding at capture must still be held.
+    // A later, unrelated fence must not revive a completed scope.
+    through_fence: u64,
 }
 
 impl Watchers {
     pub(crate) fn new(sink: NoticeSink) -> Self {
-        Self::with_armer(sink, Arc::new(native::arm))
+        let mut watchers = Self::with_armer(sink, Arc::new(native::arm));
+        if cfg!(target_os = "macos") {
+            let own_writes = Arc::clone(&watchers.own_writes);
+            watchers.armer = Arc::new(move |plan, sink| {
+                native::arm_with_own_writes(plan, sink, Some(Arc::clone(&own_writes)))
+            });
+        }
+        watchers
     }
 
     fn with_armer(sink: NoticeSink, armer: Armer) -> Self {
@@ -763,6 +783,55 @@ impl Watchers {
             notices: Arc::new(Notices::new(sink)),
             armer,
             state: Mutex::new(State::default()),
+            own_writes: Arc::default(),
+        }
+    }
+
+    pub(crate) fn write_scope(&self) -> Option<WriteScope> {
+        if !cfg!(any(target_os = "macos", test)) {
+            return None;
+        }
+        let state = self.lock();
+        Some(WriteScope {
+            subscription: state.subscription,
+            through_fence: *state.fences.last()?,
+        })
+    }
+
+    pub(crate) fn record_written(&self, scope: Option<WriteScope>, path: &Path, contents: &[u8]) {
+        let state = self.lock();
+        if scope.is_some_and(|scope| {
+            state.subscription == scope.subscription
+                && state.fences.range(..=scope.through_fence).next().is_some()
+        }) {
+            self.own_writes
+                .written(path, own_writes::Written::from_bytes(contents));
+        }
+    }
+
+    pub(crate) fn rename_evidence(
+        &self,
+        scope: Option<WriteScope>,
+        path: &Path,
+    ) -> Option<own_writes::Written> {
+        scope?;
+        own_writes::Written::read(path).ok()
+    }
+
+    pub(crate) fn record_rename(
+        &self,
+        scope: Option<WriteScope>,
+        from: &Path,
+        to: &Path,
+        evidence: Option<own_writes::Written>,
+    ) {
+        let state = self.lock();
+        if scope.is_some_and(|scope| {
+            state.subscription == scope.subscription
+                && state.fences.range(..=scope.through_fence).next().is_some()
+        }) && let Some(evidence) = evidence
+        {
+            self.own_writes.renamed(from, to, evidence);
         }
     }
 
@@ -783,6 +852,7 @@ impl Watchers {
             // keeping: its notices carry a superseded subscription and are
             // discarded at the far end anyway.
             Self::retire(&mut state);
+            self.own_writes.clear();
             // And the frontend's analysis counter restarts with the project, so the floor
             // that orders plan updates has to restart with it too. Only on a change: a
             // repeat of the subscription in hand is the same project, still counting.
@@ -914,6 +984,7 @@ impl Watchers {
         Self::retire(&mut state);
         state.plan = None;
         state.fences.clear();
+        self.own_writes.clear();
     }
 
     /// Retires the live instance ahead of an app-owned filesystem mutation, and

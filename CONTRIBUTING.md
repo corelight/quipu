@@ -27,6 +27,9 @@ npm run tauri -- dev
 The first Rust build takes longer because it compiles YARA-X and its
 dependencies from source.
 
+Experimental Apple Silicon and Intel macOS builds are described in
+[macOS development](docs/macos.md), including prerequisites and desktop checks.
+
 ## Required checks
 
 Run the checks relevant to your change. Before requesting review, a complete

@@ -7,7 +7,8 @@ updated.
 
 The assessments below cover the dependency graph locked on 2026-10-01, with
 RUSTSEC-2026-0327 assessed against that unchanged graph on 2026-10-04. An
-exception applies only to the described APIs, features, and dependency paths;
+additional macOS review of the `quick-xml` exceptions was completed on 2026-10-07.
+An exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
 
 ## RUSTSEC-2023-0071: `rsa` 0.9.10
@@ -53,12 +54,15 @@ it must be reviewed if any of those change.
   `NamespaceResolver::push`.
 - **Exposure assessment:** `plist` 1.9.0 uses a plain `quick_xml::Reader`, reads
   element local names and text, and does not iterate attributes or construct an
-  `NsReader`. Tauri's plist reads are additionally limited to macOS
-  developer- or package-controlled `Info.plist` files; the initial Linux build
-  has no runtime XML input through this dependency path.
+  `NsReader`. Rechecked for macOS packaging on 2026-10-07 against locked
+  `plist` 1.9.0 and Tauri 2.11.2: the parser still uses those unaffected APIs.
+  Tauri's macOS restart code reads `Contents/Info.plist` from its own app bundle;
+  this is package metadata, not a user-selected rule or scan target. Enabling
+  macOS packaging does not introduce the affected attribute or namespace APIs.
 - **Removal condition:** Remove both exceptions when Tauri/`plist` permits
   `quick-xml` 0.41.0 or newer. Reassess immediately if Quipu gains plist/XML
-  input, Tauri's plist parsing changes, or macOS packaging is enabled.
+  input, Tauri's plist parsing changes, or the macOS package starts accepting
+  external plist/XML input.
 
 ## RUSTSEC-2026-0222, RUSTSEC-2026-0269, and RUSTSEC-2026-0316: `wasmtime` 45.0.3
 

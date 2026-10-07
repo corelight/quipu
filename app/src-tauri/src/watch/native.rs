@@ -17,14 +17,16 @@
 //! [`Instance::retire`] closes it: a callback that finds it closed returns
 //! without emitting anything.
 //!
-//! The gate alone is enough for a mutation that *begins after* retirement, with
+//! For the retired instance, the gate covers a mutation that begins after retirement, with
 //! no assumption about the watcher's thread. Either the callback reads the gate
 //! after it was closed, and is inert; or it read the gate before, in which case
 //! it was already past the check when the fence went up, so the event it carries
 //! describes the disk before the mutation - which is what any analysis would have
 //! found anyway. What the gate cannot do is report a *genuine* external change
 //! made during the fenced interval: that one is nobody's event, and the caller
-//! has to catch up on it after re-arming.
+//! has to catch up on it after re-arming. A new macOS FSEvents stream can also
+//! replay earlier writes. Content/presence receipts verify those paths before
+//! suppressing them; errors and rescan/unknown notifications are never suppressed.
 //!
 //! The gate deliberately holds no lock the registry also takes: a callback must
 //! never be able to block the thread that is retiring it.
@@ -62,6 +64,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use notify::event::ModifyKind;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
+use super::own_writes::OwnWrites;
 use super::plan::{Change, Scope, WatchPlan, WatchTarget};
 
 /// What an armed watcher reports upwards.
@@ -218,12 +221,20 @@ pub(crate) struct Coverage {
 /// the caller to surface as degradation and to retry - because watching the project
 /// while one external dependency is unwatchable beats watching nothing.
 pub(crate) fn arm(plan: Arc<WatchPlan>, sink: SinkFn) -> Result<Coverage, String> {
+    arm_with_own_writes(plan, sink, None)
+}
+
+pub(crate) fn arm_with_own_writes(
+    plan: Arc<WatchPlan>,
+    sink: SinkFn,
+    own_writes: Option<Arc<OwnWrites>>,
+) -> Result<Coverage, String> {
     let gate = Gate::open();
     let filter = Arc::new(Mutex::new(Filter {
         plan: Arc::clone(&plan),
         kept: None,
     }));
-    let handler = route(Arc::clone(&gate), Arc::clone(&filter), sink);
+    let handler = route(Arc::clone(&gate), Arc::clone(&filter), own_writes, sink);
 
     let mut watcher =
         notify::recommended_watcher(handler).map_err(|e| format!("watcher unavailable: {e}"))?;
@@ -280,6 +291,7 @@ pub(crate) fn arm(plan: Arc<WatchPlan>, sink: SinkFn) -> Result<Coverage, String
 fn route<F>(
     gate: Arc<Gate>,
     filter: Arc<Mutex<Filter>>,
+    own_writes: Option<Arc<OwnWrites>>,
     sink: F,
 ) -> impl Fn(notify::Result<Event>) + Send + 'static
 where
@@ -291,6 +303,8 @@ where
         }
         match result {
             Ok(event) => {
+                let verify_write = !event.need_rescan()
+                    && !matches!(event.kind, EventKind::Any | EventKind::Other);
                 let Some(change) = classify(&event.kind) else {
                     return;
                 };
@@ -306,6 +320,12 @@ where
                     .into_iter()
                     .filter(|path| plan.is_relevant(path, change))
                     .filter(|path| answers_for(kept.as_deref(), path))
+                    .filter(|path| {
+                        !verify_write
+                            || !own_writes
+                                .as_ref()
+                                .is_some_and(|writes| writes.unchanged(path))
+                    })
                     .collect();
                 if !paths.is_empty() {
                     sink(Signal::Changed(paths));
@@ -353,7 +373,7 @@ pub(crate) fn inert(
 ) -> (Instance, Arc<Gate>, RouteFn) {
     let gate = Gate::open();
     let filter = Arc::new(Mutex::new(Filter { plan, kept: None }));
-    let handler = route(Arc::clone(&gate), Arc::clone(&filter), sink);
+    let handler = route(Arc::clone(&gate), Arc::clone(&filter), None, sink);
     (
         Instance {
             watcher: None,
@@ -377,9 +397,21 @@ pub(crate) fn detached<F>(
 where
     F: Fn(Signal) + Send + 'static,
 {
+    detached_with_own_writes(plan, None, sink)
+}
+
+#[cfg(test)]
+pub(crate) fn detached_with_own_writes<F>(
+    plan: Arc<WatchPlan>,
+    own_writes: Option<Arc<OwnWrites>>,
+    sink: F,
+) -> (impl Fn(notify::Result<Event>), Arc<Gate>)
+where
+    F: Fn(Signal) + Send + 'static,
+{
     let gate = Gate::open();
     let filter = Arc::new(Mutex::new(Filter { plan, kept: None }));
-    (route(Arc::clone(&gate), filter, sink), gate)
+    (route(Arc::clone(&gate), filter, own_writes, sink), gate)
 }
 
 /// Maps a `notify` event kind onto what it means for the project.

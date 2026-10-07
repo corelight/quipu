@@ -20,7 +20,9 @@ server, so you do not need a separate YARA installation.
 > [!IMPORTANT]
 > Quipu is at MVP stage. Builds target Linux and Windows x86-64.
 > Windows desktop validation covers Windows 11 24H2; see the
-> [validation record](docs/windows.md#validation-status). macOS packages are not yet available.
+> [validation record](docs/windows.md#validation-status).
+> [Experimental macOS builds](docs/macos.md) have CI coverage and user-confirmed
+> build validation; see the [validation record](docs/macos.md#validation-status).
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
 
@@ -100,6 +102,14 @@ If a compiled ruleset is forgotten after restarting, check the bundled guide's
 It explains how to confirm a quarantine and, if needed, exclude only the cache
 directory.
 
+## Experimental macOS builds
+
+The CI workflow builds ad-hoc signed DMGs for Apple Silicon and Intel, targeting
+macOS 15 or newer. They do not require an Apple Developer membership to build,
+but are not notarized and may require a Gatekeeper override to launch.
+See [macOS development](docs/macos.md) for CI artifacts, build instructions,
+and the current validation status.
+
 ## Quick start
 
 1. Start Quipu and choose **File → Open Example… → Basic text match**.
@@ -132,7 +142,7 @@ complete project model and manifest reference.
 
 ## Build from source
 
-Both platforms need:
+All platforms need:
 
 - Rust 1.93 or newer
 - Node.js 22.6 or newer
@@ -141,6 +151,8 @@ Both platforms need:
 
 For Windows, follow [Windows development](docs/windows.md) for the MSVC build
 tools, Windows SDK, WebView2 runtime, and PowerShell build commands.
+
+For experimental macOS builds, follow [macOS development](docs/macos.md).
 
 Linux also needs the native libraries required by Tauri and WebKitGTK.
 
@@ -226,8 +238,9 @@ value when it names packages and reports the running version.
 
 ## Current limitations
 
-- Packages target Linux and Windows x86-64; native ARM64 and macOS packages are
-  not yet available.
+- Release packages target Linux and Windows x86-64. macOS Apple Silicon and Intel
+  builds remain experimental CI artifacts; see the
+  [macOS validation record](docs/macos.md#validation-status).
 - Quipu scans one selected file or one text buffer at a time, not directories
   or batches.
 - New rules are created at the workspace root. Move and delete operations are
