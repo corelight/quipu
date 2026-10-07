@@ -79,6 +79,15 @@ jobs:
         working-directory: app/src-tauri
         run: cargo test --locked
 
+      # FSEvents replay is timing-dependent; exercise the real save/re-arm path
+      # repeatedly on both architectures, including a subsequent external edit.
+      - name: Repeat native watcher regression
+        working-directory: app/src-tauri
+        run: |
+          for attempt in {1..5}; do
+            cargo test --locked watch::tests::a_real_watcher_delivers_changes_and_a_fence_stops_them -- --exact
+          done
+
       # Ad-hoc signing needs no Apple account, certificate, or notarization secrets.
       - name: Build ad-hoc signed app and DMG
         working-directory: app

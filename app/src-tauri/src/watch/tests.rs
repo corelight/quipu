@@ -23,7 +23,8 @@
 //! and [`a_rearm_that_fails_after_the_write_reports_only_watcher_degradation`] needs a
 //! root the OS genuinely cannot watch. Dropping a watcher does not join its thread,
 //! so `fence` returning does not mean the thread has stopped; what it means is that
-//! the gate is closed, so a write begun afterwards is reported by nobody. The
+//! the gate is closed. On macOS, receipts also filter app writes replayed by the
+//! replacement stream, while a subsequent external edit must be delivered. The
 //! timeout is only an upper bound on how long the OS may take to deliver the writes
 //! that *are* expected, and exceeding it fails the test rather than passing it
 //! quietly.
@@ -2674,13 +2675,23 @@ fn a_real_watcher_delivers_changes_and_a_fence_stops_them() {
         "every notice carries the subscription that asked for it: {seen:?}"
     );
 
-    // Closing the gate before the write is what stops Quipu's own save being
-    // reported back to it: a callback that reads a closed gate reports nothing, and
-    // one that read it earlier was describing the disk before the write. The
-    // instance armed afterwards cannot report the write either - it did not exist
-    // when it happened.
+    // Use the same command implementation as the app: its successful write leaves
+    // evidence for macOS, which can report this write to the replacement stream.
     let fence = watchers.fence(1);
-    fixture.write("fenced.yar", &rule("fenced"));
+    assert_eq!(
+        crate::fs::save_text_file_watched(
+            fixture
+                .root
+                .join("fenced.yar")
+                .to_string_lossy()
+                .into_owned(),
+            rule("fenced"),
+            None,
+            &watchers,
+        )
+        .expect("saved"),
+        crate::fs::Saved::Written
+    );
     watchers.rearm_after_fence(1, fence).expect("re-armed");
     fixture.write("after.yar", &rule("after"));
 
@@ -2704,4 +2715,152 @@ fn a_real_watcher_delivers_changes_and_a_fence_stops_them() {
         !reported.iter().any(|path| path.contains("condition")),
         "a notice never carries file contents: {reported:?}"
     );
+
+    // A subsequent external edit to the same file must not inherit suppression.
+    fixture.write("fenced.yar", &rule("external"));
+    drain_until(&rx, "fenced.yar");
+}
+
+#[test]
+fn replacement_callbacks_verify_app_writes_but_always_forward_rescan_and_errors() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", &rule("main"));
+    let path = fixture.root.join("main.yar");
+    let writes = Arc::new(super::own_writes::OwnWrites::default());
+    writes.written(
+        &path,
+        super::own_writes::Written::from_bytes(rule("main").as_bytes()),
+    );
+    let (tx, rx) = std::sync::mpsc::channel();
+    let (handler, _gate) = native::detached_with_own_writes(
+        Arc::new(plan_for(&fixture)),
+        Some(writes),
+        move |signal| tx.send(signal).unwrap(),
+    );
+    handler(appeared(&path));
+    handler(written(&path));
+    assert!(
+        rx.try_recv().is_err(),
+        "both delayed create and write are suppressed"
+    );
+    handler(Ok(Event::new(EventKind::Other).add_path(path.clone())));
+    assert!(matches!(rx.try_recv(), Ok(Signal::Changed(_))));
+    handler(Ok(Event::new(EventKind::Modify(ModifyKind::Data(
+        DataChange::Any,
+    )))
+    .set_flag(notify::event::Flag::Rescan)
+    .add_path(path.clone())));
+    assert!(matches!(rx.try_recv(), Ok(Signal::Changed(_))));
+    handler(Err(notify::Error::generic("lost events")));
+    assert!(matches!(rx.try_recv(), Ok(Signal::Failed(_))));
+    fixture.write("main.yar", &rule("edit"));
+    handler(written(&path));
+    assert!(matches!(rx.try_recv(), Ok(Signal::Changed(paths)) if paths == vec![path]));
+}
+
+#[test]
+fn successful_commands_record_writes_and_refused_commands_do_not() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", &rule("main"));
+    let (watchers, _, _) = arming();
+    watchers.start(1, &fixture.root).unwrap();
+    let fence = watchers.fence(1);
+    let created = fixture.root.join("created.yar");
+    crate::fs::create_file_watched(created.to_string_lossy().into_owned(), &watchers).unwrap();
+    assert!(watchers.own_writes.unchanged(&created));
+    let renamed = fixture.root.join("renamed.yar");
+    crate::fs::rename_file_watched(
+        created.to_string_lossy().into_owned(),
+        renamed.to_string_lossy().into_owned(),
+        &watchers,
+    )
+    .unwrap();
+    assert!(watchers.own_writes.unchanged(&created));
+    assert!(watchers.own_writes.unchanged(&renamed));
+    let main = fixture.root.join("main.yar");
+    assert_eq!(
+        crate::fs::save_text_file_watched(
+            main.to_string_lossy().into_owned(),
+            rule("edited"),
+            Some("wrong expectation".into()),
+            &watchers
+        )
+        .unwrap(),
+        crate::fs::Saved::Refused
+    );
+    assert!(!watchers.own_writes.unchanged(&main));
+    assert!(
+        crate::fs::create_file_watched(main.to_string_lossy().into_owned(), &watchers).is_err()
+    );
+    assert!(!watchers.own_writes.unchanged(&main));
+    assert!(
+        crate::fs::rename_file_watched(
+            main.to_string_lossy().into_owned(),
+            renamed.to_string_lossy().into_owned(),
+            &watchers
+        )
+        .is_err()
+    );
+    assert!(!watchers.own_writes.unchanged(&main));
+    watchers.rearm_after_fence(1, fence).unwrap();
+}
+
+#[test]
+fn a_finished_fence_or_superseded_project_cannot_record_late_receipts() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", &rule("main"));
+    let path = fixture.root.join("main.yar");
+    let (watchers, _, _) = arming();
+    watchers.start(1, &fixture.root).unwrap();
+    let fence = watchers.fence(1);
+    let scope = watchers.write_scope();
+    watchers.record_written(scope, &path, rule("main").as_bytes());
+    assert!(watchers.own_writes.unchanged(&path));
+    watchers.start(2, &fixture.root).unwrap();
+    assert!(
+        !watchers.own_writes.unchanged(&path),
+        "project switch clears receipts"
+    );
+    let current_fence = watchers.fence(2);
+    watchers.record_written(scope, &path, rule("main").as_bytes());
+    assert!(
+        !watchers.own_writes.unchanged(&path),
+        "late write belongs to the old subscription"
+    );
+    let current_scope = watchers.write_scope();
+    watchers.rearm_after_fence(2, current_fence).unwrap();
+    watchers.record_written(current_scope, &path, rule("main").as_bytes());
+    assert!(
+        !watchers.own_writes.unchanged(&path),
+        "finished fence cannot add a receipt"
+    );
+    watchers.rearm_after_fence(1, fence).unwrap();
+}
+
+#[test]
+fn receipts_survive_either_overlapping_fence_but_not_a_later_one() {
+    for release_newest in [false, true] {
+        let fixture = Fixture::new();
+        fixture.write("main.yar", &rule("main"));
+        let path = fixture.root.join("main.yar");
+        let (watchers, _, _) = arming();
+        watchers.start(1, &fixture.root).unwrap();
+        let first = watchers.fence(1);
+        let second = watchers.fence(1);
+        let scope = watchers.write_scope();
+        let (released, remaining) = if release_newest {
+            (second, first)
+        } else {
+            (first, second)
+        };
+        watchers.rearm_after_fence(1, released).unwrap();
+        watchers.record_written(scope, &path, rule("main").as_bytes());
+        assert!(watchers.own_writes.unchanged(&path));
+        watchers.own_writes.clear();
+        watchers.rearm_after_fence(1, remaining).unwrap();
+        let later = watchers.fence(1);
+        watchers.record_written(scope, &path, rule("main").as_bytes());
+        assert!(!watchers.own_writes.unchanged(&path));
+        watchers.rearm_after_fence(1, later).unwrap();
+    }
 }

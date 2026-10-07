@@ -60,6 +60,15 @@ Tauri automatically merges `tauri.macos.conf.json` on macOS. Packages are under
 target, so its packages are under `target/<target>/release/bundle/` instead.
 Use `npm run tauri -- dev` to develop locally.
 
+## File watching
+
+macOS FSEvents can deliver an app write to a newly started watcher after a save
+fence ends. Quipu records successful app writes and checks current file contents
+(or absence after rename) before suppressing these delayed notifications. Changed
+contents, verification failures, and rescan/error notifications remain visible.
+Receipts are bounded to 4096 paths and cleared on project changes; eviction or a
+failed check can cause an extra refresh.
+
 ## Validation status
 
 The workflow runs frontend tests, builds the frontend and bundled documentation,

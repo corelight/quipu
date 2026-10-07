@@ -141,27 +141,71 @@ pub fn save_text_file(
     path: String,
     contents: String,
     expect: Option<String>,
+    watchers: tauri::State<'_, crate::watch::SharedWatchers>,
 ) -> Result<Saved, String> {
-    save_if_unchanged(Path::new(&path), &contents, expect.as_deref())
-        .map_err(|e| format!("{path}: {e}"))
+    save_text_file_watched(path, contents, expect, &watchers)
+}
+
+pub(crate) fn save_text_file_watched(
+    path: String,
+    contents: String,
+    expect: Option<String>,
+    watchers: &crate::watch::Watchers,
+) -> Result<Saved, String> {
+    let scope = watchers.write_scope();
+    let saved = save_if_unchanged(Path::new(&path), &contents, expect.as_deref())
+        .map_err(|e| format!("{path}: {e}"))?;
+    if saved == Saved::Written {
+        watchers.record_written(scope, Path::new(&path), contents.as_bytes());
+    }
+    Ok(saved)
 }
 
 /// Creates a new empty file, refusing to touch anything already at `path`.
 #[tauri::command]
-pub fn create_file(path: String) -> Result<(), String> {
-    create_new(Path::new(&path)).map_err(|e| about(&path, &e))
+pub fn create_file(
+    path: String,
+    watchers: tauri::State<'_, crate::watch::SharedWatchers>,
+) -> Result<(), String> {
+    create_file_watched(path, &watchers)
+}
+
+pub(crate) fn create_file_watched(
+    path: String,
+    watchers: &crate::watch::Watchers,
+) -> Result<(), String> {
+    let scope = watchers.write_scope();
+    create_new(Path::new(&path)).map_err(|e| about(&path, &e))?;
+    watchers.record_written(scope, Path::new(&path), b"");
+    Ok(())
 }
 
 /// Renames a file within the project, refusing to replace the destination.
 #[tauri::command]
-pub fn rename_file(from: String, to: String) -> Result<(), String> {
+pub fn rename_file(
+    from: String,
+    to: String,
+    watchers: tauri::State<'_, crate::watch::SharedWatchers>,
+) -> Result<(), String> {
+    rename_file_watched(from, to, &watchers)
+}
+
+pub(crate) fn rename_file_watched(
+    from: String,
+    to: String,
+    watchers: &crate::watch::Watchers,
+) -> Result<(), String> {
+    let scope = watchers.write_scope();
+    let evidence = watchers.rename_evidence(scope, Path::new(&from));
     rename_noreplace(Path::new(&from), Path::new(&to)).map_err(|e| {
         if e.kind() == ErrorKind::AlreadyExists {
             about(&to, &e)
         } else {
             format!("{from} -> {to}: {e}")
         }
-    })
+    })?;
+    watchers.record_rename(scope, Path::new(&from), Path::new(&to), evidence);
+    Ok(())
 }
 
 /// Commits `contents` to `path` if - and only if - `path` still holds `expect`.
