@@ -1446,7 +1446,7 @@ def main() -> int:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--server", choices=SERVER_CHOICES, default="auto")
-    ap.add_argument("--mode", choices=("dev", "release"), default="dev")
+    ap.add_argument("--mode", choices=("dev", "debug", "release"), default="dev")
     ap.add_argument("--artifacts", type=Path, default=Path("/tmp/quipu-ui-artifacts"))
     args = ap.parse_args()
 

@@ -17,6 +17,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Native menu commands and keyboard shortcuts losing their callbacks after the
+  Tauri dependency update.
 - Delayed macOS file-watcher notifications from Quipu's own writes unnecessarily
   invalidating compiled rules after the save fence ends.
 

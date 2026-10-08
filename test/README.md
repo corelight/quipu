@@ -37,7 +37,7 @@ The split matters when you come to extend it: `xdriver.py` is the reusable half 
   watchable runs and automatic fallback
 - `xclip` for atomic native-chooser path entry and for reading back the
   Preferences dialog's copyable effective cache path
-- A working Quipu build. `--mode dev` runs `npm run tauri dev` (cold start compiles Rust, hence the generous startup timeout); `--mode release` runs `app/src-tauri/target/release/quipu` and starts in seconds.
+- A working Quipu build. `--mode dev` runs `npm run tauri dev` (cold start compiles Rust, hence the generous startup timeout); `--mode release` runs `app/src-tauri/target/release/quipu` and starts in seconds. `--mode debug` runs the prebuilt debug binary with embedded frontend assets, built using `npm run tauri -- build --debug --no-bundle -- --locked`; it does not start a Vite server.
 
 No network access is needed. Capture goes through X `GetImage` directly rather than shelling out to `xwd`, and the write watcher is `ctypes` inotify rather than `inotify-tools`; `xclip` enters temporary folder paths atomically and verifies the exact read-only path displayed by Preferences.
 
@@ -109,6 +109,16 @@ at four window sizes with both side panes shown/hidden, and verifies that an
 overflowing editor pane still scrolls. This catches the Windows outer-scrollbar
 regression without requiring Tauri. It does not exercise Monaco or native window
 behaviour; the native suite and Windows desktop smoke tests cover those.
+
+## Menu callback lifetime regression
+
+Tauri 2.12.1 removes a menu item's JavaScript callback when its Rust wrapper is
+dropped. Nested option objects create temporary wrappers, so menus can render
+normally while clicks and accelerators do nothing. `menu.ts` creates items with
+explicit constructors, attaches the resulting resources, and caches those
+original handles for state updates. `menu_shape` alone cannot detect this:
+`about_dialog` fails against the affected DEB and the action scenarios exercise
+the repaired callbacks.
 
 ## The probes
 
@@ -235,6 +245,6 @@ When a scenario starts clicking the wrong thing, check these in order.
 The suite is deliberately not a framework. If it grows, the options, in rough order of cost:
 
 - **Wrap the scenarios in pytest.** They are already independent functions with clear names; a session-scoped fixture around `quipu_session()` would buy parametrisation, selection and reporting for very little work. The one thing to preserve is the guarantee that `reset_view()` runs between scenarios.
-- **Add a CI entry point.** `--server xvfb --mode release` is the intended shape: build once, then run against the binary so no run pays for a cold Rust compile. The ordinary local workflow can omit `--server` and use the Xvfb-first automatic policy. CI should still name Xvfb explicitly so a missing dependency fails rather than changing display server silently. Needs `xvfb` installed on the runner (not `xserver-xvfb`, which does not exist as a package).
+- **Broaden CI coverage.** The Linux Rust job now builds a debug app with embedded frontend assets and runs `menu_shape`, `about_dialog`, `save_fires_once`, and `view_toggles_and_reset` under Xvfb. These exercise real native clicks, shortcuts, and state updates; harness unit tests alone cannot catch disconnected menu callbacks. Failed runs upload captures and the app log. Other scenarios remain available for local acceptance testing.
 - **AT-SPI introspection via `pyatspi`.** GTK exposes menu items as accessibility objects with names and states, which would replace the pixel probes for menu structure and enabled state with something far less brittle. It is the most promising single improvement to this harness. It does not remove the need for XTEST, since accelerators still need real key events.
 - **`webkit2gtk-driver` for the webview.** Proper WebDriver access to the DOM, worth having for pane and editor behaviour where a DOM assertion beats a luminance comparison. It is blind to the native menu, so it complements this suite rather than replacing it.

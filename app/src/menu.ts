@@ -1,5 +1,21 @@
-import { Menu } from "@tauri-apps/api/menu";
-import type { CheckMenuItem, MenuItem, Submenu } from "@tauri-apps/api/menu";
+import {
+  CheckMenuItem,
+  Menu,
+  MenuItem,
+  PredefinedMenuItem,
+  Submenu,
+} from "@tauri-apps/api/menu";
+import type {
+  CheckMenuItemOptions,
+  MenuItemOptions,
+  PredefinedMenuItemOptions,
+} from "@tauri-apps/api/menu";
+
+type MenuSection = {
+  id: string;
+  text: string;
+  items: Array<MenuItemOptions | CheckMenuItemOptions | PredefinedMenuItemOptions>;
+};
 
 // The native application menu.
 //
@@ -76,9 +92,8 @@ const CHECK_IDS = {
 } as const;
 
 let menu: Menu | null = null;
-// Cached item handles. Each `menu.get(id)` is an IPC round-trip, so resolving
-// them once at build time keeps syncMenuState() cheap enough to call on every
-// keystroke-driven state change.
+// Original item handles, cached as they are created so state updates use the
+// same resources that own the callbacks.
 const items = new Map<string, MenuItem>();
 const checks = new Map<string, CheckMenuItem>();
 
@@ -108,7 +123,7 @@ export async function initMenu(cmd: MenuCommands): Promise<void> {
     action: cmd.quit,
   };
 
-  const built = await Menu.new({
+  const definition: { id: string; items: MenuSection[] } = {
     id: "app-menu",
     items: [
       {
@@ -262,17 +277,33 @@ export async function initMenu(cmd: MenuCommands): Promise<void> {
         ],
       },
     ],
-  });
+  };
 
-  // Resolve the handles we mutate later. Items live inside submenus, so walk
-  // the tree rather than calling built.get() (which only searches the top level).
-  for (const sub of await built.items()) {
-    if (sub.kind !== "Submenu") continue;
-    for (const item of await (sub as Submenu).items()) {
-      if (item.kind === "Check") checks.set(item.id, item as CheckMenuItem);
-      else if (item.kind === "MenuItem") items.set(item.id, item as MenuItem);
+  // Create each item as an owned Tauri resource before attaching it. In Tauri
+  // 2.12.1, passing nested option objects creates temporary Rust menu handles;
+  // dropping those handles removes the action channels even though GTK still
+  // displays the items. Explicit constructors keep the original handles in the
+  // webview's resource table for its lifetime. Cache those originals directly:
+  // enumerating the menu would create additional wrappers for the same IDs.
+  const submenus: Submenu[] = [];
+  for (const section of definition.items) {
+    const children: Array<MenuItem | CheckMenuItem | PredefinedMenuItem> = [];
+    for (const options of section.items) {
+      if ("item" in options) {
+        children.push(await PredefinedMenuItem.new(options));
+      } else if ("checked" in options) {
+        const item = await CheckMenuItem.new(options);
+        checks.set(item.id, item);
+        children.push(item);
+      } else {
+        const item = await MenuItem.new(options);
+        items.set(item.id, item);
+        children.push(item);
+      }
     }
+    submenus.push(await Submenu.new({ id: section.id, text: section.text, items: children }));
   }
+  const built = await Menu.new({ id: definition.id, items: submenus });
 
   if (isMac) await built.setAsAppMenu();
   else await built.setAsWindowMenu();

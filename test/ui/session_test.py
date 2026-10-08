@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from session import APP, XServer, release_binary, resolve_server
+from session import APP, XServer, built_binary, resolve_server
 
 
 class ResolveServerTests(unittest.TestCase):
@@ -49,14 +49,15 @@ class ResolveServerTests(unittest.TestCase):
         )
 
 
-class ReleaseBinaryTests(unittest.TestCase):
+class BuiltBinaryTests(unittest.TestCase):
     def test_default_target_is_below_the_tauri_crate(self) -> None:
         with patch.dict("session.os.environ", {}, clear=True):
-            self.assertEqual(release_binary(), APP / "src-tauri/target/release/quipu")
+            self.assertEqual(built_binary(), APP / "src-tauri/target/release/quipu")
 
     def test_absolute_cargo_target_directory_is_respected(self) -> None:
         with patch.dict("session.os.environ", {"CARGO_TARGET_DIR": "/tmp/quipu-target"}):
-            self.assertEqual(release_binary(), Path("/tmp/quipu-target/release/quipu"))
+            self.assertEqual(built_binary(), Path("/tmp/quipu-target/release/quipu"))
+            self.assertEqual(built_binary("debug"), Path("/tmp/quipu-target/debug/quipu"))
 
 
 if __name__ == "__main__":
