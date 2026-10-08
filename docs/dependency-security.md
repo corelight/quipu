@@ -8,6 +8,12 @@ updated.
 The assessments below cover the dependency graph locked on 2026-10-01, with
 RUSTSEC-2026-0327 assessed against that unchanged graph on 2026-10-04. An
 additional macOS review of the `quick-xml` exceptions was completed on 2026-10-07.
+The Tauri 2.12.1 dependency update was reassessed on 2026-10-08: the GLib and
+plist API checks below still hold, and the locked YARA-X/RSA/Wasmtime versions
+are unchanged. The all-target Wasmtime feature graph still enables neither
+WASI nor component support. The audit reports no new advisories; the existing
+exceptions remain necessary. Updating `urlpattern` to 0.6.0 removes the
+unmaintained `unic-*` family from the resolved graph.
 An exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
 
@@ -34,9 +40,10 @@ it must be reviewed if any of those change.
   in turn pins `glib` 0.18.5. Quipu does not select this version directly.
 - **Affected API:** The advisory applies to `VariantStrIter` and
   `VariantTypeStrIter` for a specific non-Send iterator soundness issue.
-- **Exposure assessment:** Neither Quipu nor any crate in its resolved
-  dependency source calls the affected iterator types. The dependency remains
-  present because it supplies the Linux GUI stack.
+- **Exposure assessment:** Neither Quipu nor GLib's consumers in the resolved
+  dependency sources reference the affected iterator types or `array_iter_str`.
+  Rechecked on 2026-10-08 for Tauri 2.12.1, Wry 0.57.0, and Tao 0.37.1.
+  The dependency remains present because it supplies the Linux GUI stack.
 - **Removal condition:** Remove the audit exception as soon as Tauri's supported
   Linux stack no longer resolves to the affected `glib` release. Recheck on
   every Tauri, Wry, WebKitGTK binding, or GTK binding update.
@@ -54,8 +61,8 @@ it must be reviewed if any of those change.
   `NamespaceResolver::push`.
 - **Exposure assessment:** `plist` 1.9.0 uses a plain `quick_xml::Reader`, reads
   element local names and text, and does not iterate attributes or construct an
-  `NsReader`. Rechecked for macOS packaging on 2026-10-07 against locked
-  `plist` 1.9.0 and Tauri 2.11.2: the parser still uses those unaffected APIs.
+  `NsReader`. Rechecked for macOS packaging on 2026-10-08 against locked
+  `plist` 1.9.0 and Tauri 2.12.1: the parser still uses those unaffected APIs.
   Tauri's macOS restart code reads `Contents/Info.plist` from its own app bundle;
   this is package metadata, not a user-selected rule or scan target. Enabling
   macOS packaging does not introduce the affected attribute or namespace APIs.
@@ -119,10 +126,6 @@ reviewed as dependency-maintenance work:
 - `proc-macro-error` 1.0.4 is unmaintained and comes from the Tauri Linux GTK 3
   stack through `glib-macros` and `gtk3-macros`. Remove it when Tauri's
   supported Linux stack migrates away from those macros.
-- `unic-char-property`, `unic-char-range`, `unic-common`, `unic-ucd-ident`, and
-  `unic-ucd-version` 0.9.0 are one unmaintained crate family pulled in by
-  Tauri's `urlpattern` dependency. Remove them when Tauri or `urlpattern`
-  adopts maintained Unicode-property crates.
 - `spin` 0.9.8 is yanked and comes from YARA-X's RSA/DSA bigint stack through
   `lazy_static`. A yanked crate is not itself a vulnerability, and the locked
   source remains reproducible; remove it when YARA-X's cryptography dependency
