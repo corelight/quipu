@@ -145,7 +145,7 @@ complete project model and manifest reference.
 All platforms need:
 
 - Rust 1.93 or newer
-- Node.js 22.6 or newer
+- Node.js 22.12 or newer
 - Zola 0.23.6
 - Git
 
