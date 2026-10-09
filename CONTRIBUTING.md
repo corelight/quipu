@@ -87,6 +87,58 @@ Rust dependency uses a license outside the reviewed set in
 `app/src-tauri/about.toml`, or if a production npm package has no packaged
 license or notice file.
 
+## Dependency update groups
+
+[Dependabot configuration](.github/dependabot.yml) groups packages by the changes
+that need to be tested together:
+
+- **Tauri:** one cross-ecosystem PR for `@tauri-apps/*` in npm and `tauri`/`tauri-*`
+  in Cargo. Ordinary ecosystem entries exclude these version updates so there
+  is no second, independently mergeable half of the update. The exclusions use
+  version-update types, which do not suppress security updates.
+- **YARA-X:** `yara-x`, `yara-x-parser`, and `yara-x-ls` share one Cargo group.
+  It intentionally has no SemVer filter, so git-tag updates are grouped too.
+  Review that all three tags still point at the same upstream release.
+- **Monaco:** its own npm group, since 0.x minor updates can require editor
+  migrations. This keeps that work out of routine frontend dependency updates.
+- Other npm/Cargo minor and patch updates retain their ecosystem groups; other
+  major upgrades remain separate. GitHub Actions retain their existing group.
+
+All version-update groups run weekly on Monday. Cross-ecosystem grouping
+coordinates available updates in one review; it cannot guarantee that upstream
+publishes compatible versions simultaneously. Packaging and integration checks
+still decide whether the proposed combination works. Security updates remain
+eligible independently and may need manual coordination across ecosystems.
+
+The cross-ecosystem layout follows GitHub's
+[multi-ecosystem configuration](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-multi-ecosystem-updates)
+and the maintainers' [example for grouping only selected packages](https://github.com/dependabot/dependabot-core/discussions/12437#discussioncomment-13449744).
+After merging a configuration change, verify the jobs in **Insights → Dependency
+graph → Dependabot**. Existing PRs are not retroactively combined; close older
+split PRs only once their replacement is available or their updates are merged.
+Generated license notices still need refreshing when a dependency PR changes
+runtime packages.
+
+## Platform workflows
+
+CI calls reusable [Linux](.github/workflows/linux-build.yml),
+[Windows](.github/workflows/windows-build.yml), and
+[macOS](.github/workflows/macos-build.yml) workflows. Linux and Windows are also
+called by Release; macOS remains experimental and outside release publication.
+
+Linux tests and packages on Ubuntu 22.04 to preserve the release glibc baseline.
+It checks formatting, Clippy, frontend/Rust tests and license notices, builds
+AppImage/DEB/RPM packages, validates their contents, and runs native menu smoke
+tests against the resulting release binary. The `quipu-linux-x86_64` artifact is
+uploaded only after those checks pass, including on pull requests. The workflow
+also supports manual dispatch once present on the default branch.
+
+The existing required **Rust** check is a compatibility gate: it succeeds only
+when the complete reusable Linux job succeeds. Failures, cancellations and skips
+cannot satisfy it. This retains branch protection without duplicating the build.
+Release waits for both Linux and Windows before assembling checksums; publication
+remains restricted to version tags and the existing release environment.
+
 ## Change guidelines
 
 - Keep each pull request focused on one coherent change.
