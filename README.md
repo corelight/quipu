@@ -59,6 +59,12 @@ Linux x86-64 packages are published on the
 The `.deb` and `.rpm` packages use the system WebKitGTK runtime. If your
 distribution cannot satisfy that dependency, use the AppImage.
 
+Development packages are available as `quipu-linux-x86_64` artifacts from
+successful [CI runs](https://github.com/corelight/quipu/actions/workflows/ci.yml).
+CI and Release call the same Linux workflow, including package validation and
+native menu smoke tests. The combined `SHA256SUMS` file is supplied by Release,
+not by individual CI artifacts.
+
 Quipu packages are not currently signed. Each release includes a
 `SHA256SUMS` file; download it beside the packages and verify the files you
 downloaded with:
