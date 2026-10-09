@@ -9,6 +9,12 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade the YARA-X compiler, include parser, and language server together to
+  1.21.0, including upstream scan correctness and parser memory improvements.
+  Compiled caches from older engine versions require recompilation.
+
 ### Added
 
 - Experimental macOS 15+ CI builds for Apple Silicon and Intel, with ad-hoc

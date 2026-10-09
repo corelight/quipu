@@ -14,6 +14,12 @@ are unchanged. The all-target Wasmtime feature graph still enables neither
 WASI nor component support. The audit reports no new advisories; the existing
 exceptions remain necessary. Updating `urlpattern` to 0.6.0 removes the
 unmaintained `unic-*` family from the resolved graph.
+The YARA-X 1.21.0 update was reassessed on 2026-10-10. RSA remains at 0.9.10
+and Wasmtime at 45.0.3. The new YARA-X source still uses RSA public-key
+verification and one process-global Wasmtime engine; the all-target feature
+graph still enables neither WASI nor component support. The fresh audit reports
+the same advisories and informational warnings, so no exceptions are added or
+removed for this upgrade.
 An exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
 
@@ -43,6 +49,7 @@ existing high-severity CI audit threshold remains unchanged.
   this path and calls `Pkcs1v15Sign::verify` while inspecting file signatures.
   It neither loads an RSA private key nor performs signing or decryption, so
   there is no private key for the affected side channel to disclose.
+  Rechecked against YARA-X 1.21.0 on 2026-10-10.
 - **Removal condition:** Remove the exception when YARA-X adopts a patched RSA
   implementation, removes this dependency, or starts using private-key
   operations. Recheck on every YARA-X or `rsa` update.
@@ -88,7 +95,7 @@ existing high-severity CI audit threshold remains unchanged.
 ## RUSTSEC-2026-0222, RUSTSEC-2026-0269, and RUSTSEC-2026-0316: `wasmtime` 45.0.3
 
 - **Status:** Temporarily ignored in `.github/workflows/security.yml`.
-  YARA-X 1.20.0 constrains Wasmtime to the 45.x line, for which these advisories
+  YARA-X 1.21.0 constrains Wasmtime to the 45.x line, for which these advisories
   have no patched release.
 - **Dependency path:** YARA-X uses Wasmtime to execute the WebAssembly it
   generates for compiled rules. Quipu does not use Wasmtime directly.
@@ -110,7 +117,7 @@ existing high-severity CI audit threshold remains unchanged.
 ## RUSTSEC-2026-0327: `wasmtime` 45.0.3
 
 - **Status:** Temporarily ignored in `.github/workflows/security.yml`.
-  The upstream fixes are in 48.0.4 and 49.0.2; YARA-X 1.20.0 constrains
+  The upstream fixes are in 48.0.4 and 49.0.2; YARA-X 1.21.0 constrains
   Wasmtime to the unpatched 45.x line.
 - **Dependency path:** YARA-X uses Wasmtime for the core WebAssembly generated
   from rule conditions. Quipu does not use the component API.

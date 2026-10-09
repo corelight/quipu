@@ -15,6 +15,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, DuplexStream, ReadHalf, WriteHalf};
 use tokio::sync::mpsc;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
+#[cfg(test)]
+mod tests;
+
 /// Event channel name for server -> webview messages.
 const EVENT_RECV: &str = "lsp_recv";
 
