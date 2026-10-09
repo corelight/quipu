@@ -17,6 +17,20 @@ unmaintained `unic-*` family from the resolved graph.
 An exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
 
+## Monaco 0.57 JavaScript audit (2026-10-09)
+
+The upgrade introduces explicit `marked` 14.0.0 and `dompurify` 3.4.15
+dependencies. npm reports two low-severity DOMPurify advisories,
+[GHSA-p98j-92pf-mc4p](https://github.com/advisories/GHSA-p98j-92pf-mc4p) and
+[GHSA-6688-9rhm-gjv2](https://github.com/advisories/GHSA-6688-9rhm-gjv2), also
+attributed transitively to Monaco. Both require `IN_PLACE` sanitization. Monaco's
+Markdown renderer passes strings through `domSanitize` without enabling that
+option; Quipu does not call DOMPurify directly. Monaco also embeds its own copy
+of DOMPurify 3.4.15, so overriding the npm dependency alone would not replace
+the sanitizer used by editor hovers. Recheck this assessment when upgrading
+Monaco or adding custom HTML sanitization. No audit suppression is added; the
+existing high-severity CI audit threshold remains unchanged.
+
 ## RUSTSEC-2023-0071: `rsa` 0.9.10
 
 - **Status:** Temporarily ignored in `.github/workflows/security.yml`; no

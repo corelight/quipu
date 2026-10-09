@@ -1,4 +1,4 @@
-import * as monaco from "monaco-editor/esm/vs/editor/edcore.main";
+import * as monaco from "../monaco";
 // The "/browser" entry installs the Runtime Abstraction Layer that
 // vscode-jsonrpc needs to schedule message handling. The bare "vscode-jsonrpc"
 // entry installs no RAL, causing a "No runtime abstraction layer installed"

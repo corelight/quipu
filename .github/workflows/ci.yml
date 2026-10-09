@@ -47,6 +47,24 @@ jobs:
         working-directory: app
         run: npm run build
 
+      - name: Install editor browser test dependencies
+        run: |
+          python3 -m venv /tmp/quipu-editor-venv
+          /tmp/quipu-editor-venv/bin/python -m pip install playwright==1.59.0
+          /tmp/quipu-editor-venv/bin/python -m playwright install --with-deps chromium
+
+      - name: Exercise Monaco and the YARA LSP adapter
+        run: /tmp/quipu-editor-venv/bin/python test/ui/editor_regression.py
+
+      - name: Upload editor failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: editor-regression-diagnostics
+          path: /tmp/quipu-editor-regression-failure.png
+          if-no-files-found: ignore
+          retention-days: 14
+
   rust:
     name: Rust
     runs-on: ubuntu-24.04

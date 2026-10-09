@@ -1,10 +1,4 @@
-// Import the namespace from `edcore.main`: it registers the editor feature
-// CONTRIBUTIONS (hover, suggest/completion, semantic-tokens controllers — the
-// parts that actually QUERY registered providers) while excluding Monaco's ~80
-// bundled language modes. Bare `editor.api` lacks the contributions, so
-// providers never fire; full `monaco-editor` re-adds all the languages we don't want.
-import * as monaco from "monaco-editor/esm/vs/editor/edcore.main";
-import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import * as monaco from "./monaco";
 import type { YaraLspClient } from "./lsp/client";
 import { atRiskOnExit } from "./closing";
 import {
@@ -18,14 +12,6 @@ import {
   type RiskStamp,
   type SaveSnapshot,
 } from "./documents";
-
-// Monaco needs to know how to spawn its web workers. We only use the base
-// editor worker (no TS/JSON/etc language services), so this is the whole setup.
-self.MonacoEnvironment = {
-  getWorker() {
-    return new editorWorker();
-  },
-};
 
 export const LANGUAGE_ID = "yara";
 // URI for the unsaved scratch buffer shown before a folder is opened.
@@ -127,6 +113,7 @@ export class Workspace {
     registerYaraLanguage();
     this.editor = monaco.editor.create(container, {
       theme: "vs-dark",
+      "semanticHighlighting.enabled": true,
       automaticLayout: true,
       minimap: { enabled: false },
       fontSize: 13,
