@@ -389,9 +389,14 @@ def rename_rekeys_and_saves(drv: Driver, win: WindowInfo, ws: Path, artifacts: P
     assert written == {"renamed.yar"}, f"save touched {written}, expected only renamed.yar"
     print(f"  rename re-keyed; save wrote {written}")
 
-    # Put the workspace back: later scenarios address files by row order, so a
-    # leftover rename shifts every subsequent click.
-    (ws / "renamed.yar").rename(ws / "a.yar")
+    # Put the workspace back through the app so its model follows the file.
+    # Renaming on disk leaves the open model pointing at a missing file; the
+    # next Open Folder then raises a discard-conflict dialog and blocks the suite.
+    Menu(drv, win).activate("File", LABEL_INDEX["file.rename-rule"], settle=1.2)
+    drv.type_text("a.yar\n")
+    time.sleep(1.2)
+    assert (ws / "a.yar").exists(), "rename cleanup did not restore the file"
+    assert not (ws / "renamed.yar").exists(), "rename cleanup left the temporary name"
     activate_file.invalidate()
 
 

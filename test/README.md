@@ -110,6 +110,29 @@ overflowing editor pane still scrolls. This catches the Windows outer-scrollbar
 regression without requiring Tauri. It does not exercise Monaco or native window
 behaviour; the native suite and Windows desktop smoke tests cover those.
 
+### Monaco editor regression
+
+`python3 test/ui/editor_regression.py` builds a production Vite fixture using
+the real `Workspace`, YARA LSP adapter, Monaco configuration and worker. It needs
+Python Playwright 1.59.0 and Chromium (`python3 -m pip install playwright==1.59.0`
+and `python3 -m playwright install chromium`). CI runs it in the frontend job.
+
+Only the native IPC boundary is mocked, with deterministic LSP responses. The
+test checks rendering, Monarch highlighting, requests for full-document semantic
+tokens, visible completion and hover, pushed diagnostics, typing/undo/find,
+dirty edits across switching and renaming, closing models, and a real editor
+worker round trip. It runs under the app's Content Security Policy and fails on
+browser errors or worker fallback warnings. The fixture is built in a temporary
+directory and is not included in the shipped app. A failure screenshot is saved
+to `/tmp/quipu-editor-regression-failure.png` and uploaded by CI.
+
+This catches import/feature-registration failures that the model-free unit tests
+cannot see. Monaco 0.57 removes `edcore.main`, changes package export paths, and
+omits the full-document semantic-token controller from `features/register.all`;
+Quipu registers that controller explicitly. The standalone dark theme also needs
+semantic highlighting enabled explicitly. Native tests and manual desktop checks
+remain necessary for WebKitGTK/WebView2 behavior and the actual YARA language server.
+
 The folder-chooser driver explicitly focuses its X11 window and switches to
 filesystem browsing before pasting the workspace path. A fresh CI profile can
 otherwise leave the chooser in an empty Recent view; relying on remembered
