@@ -36,7 +36,7 @@ yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.20.0" }
 # The project model parses `include` directives with YARA-X's own parser, so
 # Quipu's include graph cannot drift from what the compiler accepts. Same repo
 # and tag as yara-x/yara-x-ls; Cargo resolves all three to one checkout.
-yara-x-parser = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.20.0" }
+yara-x-parser = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.21.0" }
 
 # Same minimal feature set proven in crates/yexer (Phase 0):
 # magic-module OFF (libmagic), native-code-serialization OFF (portable .yarc).
