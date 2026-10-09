@@ -110,6 +110,11 @@ overflowing editor pane still scrolls. This catches the Windows outer-scrollbar
 regression without requiring Tauri. It does not exercise Monaco or native window
 behaviour; the native suite and Windows desktop smoke tests cover those.
 
+The folder-chooser driver explicitly focuses its X11 window and switches to
+filesystem browsing before pasting the workspace path. A fresh CI profile can
+otherwise leave the chooser in an empty Recent view; relying on remembered
+locations or window-manager focus makes Open Folder automation unreliable.
+
 ## Menu callback lifetime regression
 
 Tauri 2.12.1 removes a menu item's JavaScript callback when its Rust wrapper is

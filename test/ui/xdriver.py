@@ -111,6 +111,12 @@ class Driver:
 
     # ---- input ----
 
+    def focus(self, window: WindowInfo) -> None:
+        """Give a mapped toplevel keyboard focus without relying on a WM."""
+        native = self.d.create_resource_object("window", window.id)
+        native.set_input_focus(X.RevertToParent, X.CurrentTime)
+        self.d.sync()
+
     def move(self, x: int, y: int) -> None:
         xtest.fake_input(self.d, X.MotionNotify, x=int(x), y=int(y))
         self.d.sync()

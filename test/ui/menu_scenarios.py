@@ -744,8 +744,14 @@ def _open_folder_once(drv: Driver, win: WindowInfo, ws: Path) -> str | None:
     chooser = _find_chooser(drv)
     if chooser is None:
         return "Open Folder did not raise a Select Folder dialog"
+    drv.focus(chooser)
     drv.click(chooser.x + chooser.width // 2, chooser.y + chooser.height // 2)
     time.sleep(0.4)
+    # A fresh GTK profile can start in Recent with no selectable folders. Switch
+    # to filesystem browsing before entering an absolute location. This also
+    # avoids depending on the developer's remembered chooser startup location.
+    drv.key("Home", ("Alt_L",))
+    time.sleep(0.7)
     drv.key("l", ("Control_L",))
     time.sleep(0.7)
     # Select whatever a previous attempt left behind so the paste replaces it.
@@ -754,6 +760,7 @@ def _open_folder_once(drv: Driver, win: WindowInfo, ws: Path) -> str | None:
     if failure := _paste_folder_path(drv, ws):
         return failure
     time.sleep(0.6)
+    drv.focus(chooser)
     drv.key("Return")
     time.sleep(1.0)
     chooser = _find_chooser(drv)
