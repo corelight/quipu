@@ -62,7 +62,8 @@ jobs:
             libgtk-3-dev \
             librsvg2-dev \
             libssl-dev \
-            libwebkit2gtk-4.1-dev
+            libwebkit2gtk-4.1-dev \
+            python3-pil python3-xlib xclip xvfb
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@283fb51ee3c8a49cd7c8ff30102f3fcf3cfbe0e1 # 1.93.0
@@ -111,6 +112,35 @@ jobs:
         run: |
           npm run licenses:generate
           git diff --exit-code -- ../THIRD_PARTY_LICENSES/
+
+      - name: Install Zola for native menu smoke tests
+        uses: taiki-e/install-action@e407f7bafb71fd004bc5c2da3032e5470cbb6ef0 # v2
+        with:
+          tool: zola@0.23.6
+
+      - name: Build app for native menu smoke tests
+        working-directory: app
+        run: npm run tauri -- build --debug --no-bundle -- --locked
+
+      - name: Exercise Linux native menus
+        timeout-minutes: 5
+        env:
+          WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: >-
+          python3 test/ui/menu_scenarios.py
+          menu_shape about_dialog save_fires_once view_toggles_and_reset
+          --server xvfb --mode debug --artifacts /tmp/quipu-menu-smoke
+
+      - name: Upload native menu diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-menu-smoke-diagnostics
+          path: |
+            /tmp/quipu-menu-smoke/
+            /tmp/quipu-uitest.log
+          retention-days: 14
 
   windows:
     name: Windows x86-64

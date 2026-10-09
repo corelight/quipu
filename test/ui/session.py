@@ -52,8 +52,8 @@ SERVER_BINARIES = {"xephyr": "Xephyr", "xvfb": "Xvfb"}
 SERVER_PACKAGES = {"xephyr": "xserver-xephyr", "xvfb": "xvfb"}
 
 
-def release_binary() -> Path:
-    """Return the release binary, respecting Cargo's configured target root."""
+def built_binary(mode: str = "release") -> Path:
+    """Return a prebuilt binary, respecting Cargo's configured target root."""
     configured = os.environ.get("CARGO_TARGET_DIR")
     if configured is None:
         target = APP / "src-tauri" / "target"
@@ -61,7 +61,7 @@ def release_binary() -> Path:
         target = Path(configured)
         if not target.is_absolute():
             target = APP / "src-tauri" / target
-    return target / "release" / "quipu"
+    return target / mode / "quipu"
 
 
 def resolve_server(kind: str) -> str:
@@ -246,9 +246,12 @@ class App:
                 cmd += ["--", "--debug"]
             cwd = APP
         else:
-            binary = release_binary()
+            binary = built_binary(self.mode)
             if not binary.exists():
-                raise FileNotFoundError(f"{binary} not built; run `npm run tauri build` first")
+                raise FileNotFoundError(
+                    f"{binary} not built; run `npm run tauri -- build"
+                    f"{' --debug' if self.mode == 'debug' else ''} --no-bundle` first"
+                )
             cmd = [str(binary)]
             if self.debug:
                 cmd.append("--debug")
@@ -415,7 +418,7 @@ def main() -> int:
     # This command is for interactive poking, so keep its visible default even
     # though automated scenario runs use the headless-first `auto` policy.
     ap.add_argument("--server", choices=SERVER_CHOICES, default="xephyr")
-    ap.add_argument("--mode", choices=("dev", "release"), default="dev")
+    ap.add_argument("--mode", choices=("dev", "debug", "release"), default="dev")
     args = ap.parse_args()
     # Interactive mode gets the same throwaway profile as a scenario run: poking
     # at the app by hand must not write to the real one either. It lives until
