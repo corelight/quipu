@@ -18,6 +18,9 @@ mod project;
 // from an analysis.
 mod watch;
 
+// Dependency consistency checks run alongside the backend tests on every platform.
+#[cfg(test)]
+mod dependency_tests;
 // Temporary project trees and other helpers the test modules share.
 #[cfg(test)]
 mod testing;

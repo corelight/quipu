@@ -99,6 +99,8 @@ that need to be tested together:
 - **YARA-X:** `yara-x`, `yara-x-parser`, and `yara-x-ls` share one Cargo group.
   It intentionally has no SemVer filter, so git-tag updates are grouped too.
   Review that all three tags still point at the same upstream release.
+  A Rust regression test checks the manifest pins and resolved lockfile for a
+  single YARA-X release; grouping alone does not guarantee this invariant.
 - **Monaco:** its own npm group, since 0.x minor updates can require editor
   migrations. This keeps that work out of routine frontend dependency updates.
 - Other npm/Cargo minor and patch updates retain their ecosystem groups; other
