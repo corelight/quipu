@@ -31,7 +31,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 # tag. (yara-x-ls — the language server we embed — is not published to
 # crates.io, so a git dependency is the only way to get it; we pin the lib to
 # the same tag for consistency.) Cargo fetches + locks this; no sibling checkout.
-yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.20.0" }
+yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.21.0" }
 
 # The project model parses `include` directives with YARA-X's own parser, so
 # Quipu's include graph cannot drift from what the compiler accepts. Same repo
