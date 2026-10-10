@@ -80,13 +80,18 @@ signature.
 
 For Windows x86-64 packages (v0.3.0 and later), download an installer from
 [GitHub Releases](https://github.com/corelight/quipu/releases).
-Development builds are also available as `quipu-windows-x86_64` artifacts from
+Development builds are also available as `quipu-windows-x86_64` and
+`quipu-windows-offline-x86_64` artifacts from
 successful [CI runs](https://github.com/corelight/quipu/actions/workflows/ci.yml).
 
 - Use the NSIS `.exe` installer for a current-user installation.
 - An MSI `.msi` installer is also available.
-- Microsoft Edge WebView2 is required. The installer downloads its bootstrapper
-  if the runtime is missing, so installation may need internet access.
+- For air-gapped systems, choose an `-offline.exe` or `-offline.msi` installer
+  (the `quipu-windows-offline-x86_64` CI artifact). These larger packages include
+  the full Microsoft Edge WebView2 runtime installer and can install it without
+  internet access.
+- Standard installers download WebView2 when the runtime is missing, so
+  installation may need internet access.
 
 The installers are unsigned, so Windows may show an unknown-publisher or
 SmartScreen warning. Check that your download came from this repository's
