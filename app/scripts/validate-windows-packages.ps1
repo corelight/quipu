@@ -1,5 +1,7 @@
 # Run only on a disposable Windows CI runner: the NSIS check performs a real
 # per-user install and uninstall. MSI is inspected through an administrative image.
+param([switch] $Offline)
+
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 $bundle = Join-Path $repo 'app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle'
@@ -8,6 +10,29 @@ $msi = @(Get-ChildItem "$bundle/msi/*.msi")
 if ($nsis.Count -ne 1 -or $msi.Count -ne 1) { throw 'Expected one NSIS and one MSI installer' }
 $validation = Join-Path $env:RUNNER_TEMP "quipu-packages-$([guid]::NewGuid())"
 New-Item -ItemType Directory -Path $validation | Out-Null
+
+function Assert-OfflineRuntime([string] $package) {
+    # Hosted runners already have WebView2, so installation alone cannot prove
+    # that the standalone runtime is embedded. Inspect the NSIS payload and MSI
+    # Binary stream as well (administrative MSI extraction omits that stream).
+    $listing = & 7z l -slt $package
+    if ($LASTEXITCODE -ne 0) { throw "Cannot inspect offline installer: $package" }
+    $entries = ($listing -join "`n") -split '\r?\n\r?\n'
+    $runtime = @($entries | Where-Object {
+        $_ -match '(?m)^Path = .*MicrosoftEdgeWebView2RuntimeInstaller\.exe\r?$'
+    })
+    if ($runtime.Count -ne 1) { throw "Expected one embedded offline WebView2 installer in $package" }
+    $size = [regex]::Match($runtime[0], '(?m)^Size = (\d+)\r?$')
+    # The download bootstrapper is only a few MB; the full runtime is much larger.
+    if (-not $size.Success -or [long] $size.Groups[1].Value -lt 10MB) {
+        throw "Embedded WebView2 payload is too small to be the offline installer: $package"
+    }
+}
+
+if ($Offline) {
+    Assert-OfflineRuntime $nsis[0].FullName
+    Assert-OfflineRuntime $msi[0].FullName
+}
 
 function Assert-Contents([string] $root) {
     if (-not (Test-Path "$root/quipu.exe" -PathType Leaf)) { throw "Missing executable in $root" }
