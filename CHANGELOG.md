@@ -17,6 +17,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Separate offline Windows NSIS and MSI installers with the full WebView2
+  runtime installer embedded for air-gapped installation.
 - Experimental macOS 15+ CI builds for Apple Silicon and Intel, with ad-hoc
   signed DMGs, package validation, and development instructions. These builds
   are not notarized and are not yet included in releases.

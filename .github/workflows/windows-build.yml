@@ -74,16 +74,39 @@ jobs:
       - name: Validate installer contents
         run: ./app/scripts/validate-windows-packages.ps1
 
-      - name: Collect packages
+      - name: Collect standard packages before offline bundling replaces them
         run: |
-          New-Item -ItemType Directory -Path dist | Out-Null
-          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe dist/
-          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi dist/
+          New-Item -ItemType Directory -Path dist/standard | Out-Null
+          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe dist/standard/
+          Copy-Item app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi dist/standard/
+
+      - name: Bundle offline NSIS and MSI installers with WebView2
+        working-directory: app
+        run: npm run tauri -- bundle --ci --target x86_64-pc-windows-msvc --bundles nsis,msi --config src-tauri/tauri.windows.offline.conf.json
+
+      - name: Validate offline installer contents and embedded runtime
+        run: ./app/scripts/validate-windows-packages.ps1 -Offline
+
+      - name: Collect offline packages with distinct release filenames
+        run: |
+          New-Item -ItemType Directory -Path dist/offline | Out-Null
+          $packages = Get-ChildItem app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe, app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+          foreach ($package in $packages) {
+            Copy-Item $package.FullName (Join-Path dist/offline "$($package.BaseName)-offline$($package.Extension)")
+          }
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: quipu-windows-x86_64
-          path: dist/
+          path: dist/standard/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload offline package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: quipu-windows-offline-x86_64
+          path: dist/offline/
           if-no-files-found: error
           retention-days: 14

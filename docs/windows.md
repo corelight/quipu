@@ -4,9 +4,10 @@ Windows x86-64 builds have CI coverage and completed Windows 11 desktop validati
 recorded [below](#validation-status). Daily development
 can happen on Linux; GitHub Actions runs the Windows tests and builds
 NSIS `.exe` and WiX `.msi` installers using the MSVC toolchain on `windows-2022`.
-The CI workflow uploads `quipu-windows-x86_64` artifacts. The release workflow
-uses the same Windows job, waits for both platforms, and generates one combined
-`SHA256SUMS` for the release packages.
+The CI workflow uploads `quipu-windows-x86_64` and
+`quipu-windows-offline-x86_64` artifacts, each containing NSIS and MSI installers.
+The release workflow uses the same Windows job, waits for both platforms, and
+generates one combined `SHA256SUMS` covering standard and offline packages.
 
 ## Build locally on Windows
 
@@ -36,13 +37,39 @@ extracts the MSI administrative image to verify packaged resources against the
 repository. This is package validation; interactive application testing remains
 necessary.
 
+To produce offline installers from the same application build, first copy the
+standard installers elsewhere if you want to keep them, then run from `app`:
+
+```powershell
+npm run tauri -- bundle --ci --target x86_64-pc-windows-msvc --bundles nsis,msi --config src-tauri/tauri.windows.offline.conf.json
+```
+
+This downloads and embeds the full x86-64 Evergreen WebView2 installer at
+packaging time. The build machine needs internet access. The command replaces
+the installers in the same output directories; CI preserves the standard
+packages first and adds `-offline` before each offline installer's extension.
+The override retains the normal installation mode and MSI upgrade identity.
+
 ## Distribution
 
-The NSIS installer installs for the current user. Both installers use Tauri's
-WebView2 download bootstrapper when the runtime is absent, so first installation
-may require internet access. Rule compilation and scanning run locally. For a
-deployment requiring offline runtime installation, build with
-`bundle.windows.webviewInstallMode.type` set to `offlineInstaller`.
+The NSIS installer installs for the current user. Standard NSIS and MSI packages
+use Tauri's WebView2 download bootstrapper when the runtime is absent, so first
+installation may require internet access.
+
+For air-gapped systems, use the larger `-offline.exe` or `-offline.msi` package
+from a release, or the `quipu-windows-offline-x86_64` CI artifact. These packages
+include the full WebView2 runtime installer using Tauri's `offlineInstaller`
+mode, so no runtime download is needed on the target machine. They also contain
+the same application, examples, notices, and embedded documentation. Rule
+compilation and scanning run locally. WebView2 security updates on disconnected
+machines must be delivered through your offline software update process.
+
+CI validates both package variants and checks that each offline package embeds
+the standalone WebView2 installer. Hosted runners already have WebView2, so this
+does not exercise runtime installation on a clean air-gapped machine. Before
+deployment, test each chosen installer format on a disposable Windows VM with
+WebView2 absent and networking disabled, then launch Quipu, open the bundled
+documentation, and compile and scan a bundled example.
 
 Installers are currently unsigned, matching the Linux distribution policy.
 Authenticode signing can be configured separately with protected release
