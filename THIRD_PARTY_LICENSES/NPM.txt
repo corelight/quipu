@@ -7,7 +7,7 @@ corresponding npm package contents. The notices below do not change the
 licensing terms of Quipu itself.
 
 -------------------------------------------------------------------------------
-@tauri-apps/api 2.12.1
+@tauri-apps/api 2.12.2
 Declared license: Apache-2.0 OR MIT
 Source: https://github.com/tauri-apps/tauri#readme
 
