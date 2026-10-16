@@ -20,8 +20,33 @@ verification and one process-global Wasmtime engine; the all-target feature
 graph still enables neither WASI nor component support. The fresh audit reports
 the same advisories and informational warnings, so no exceptions are added or
 removed for this upgrade.
+The October 14 Wasmtime advisories RUSTSEC-2026-0359, RUSTSEC-2026-0362, and
+RUSTSEC-2026-0363 were assessed on 2026-10-15 against the same YARA-X 1.21.0 /
+Wasmtime 45.0.3 graph. The exceptions below depend on disabled Wasmtime features,
+YARA-X's scalar host bindings, and Quipu's explicit trusted-cache model.
+Validation with CI's cargo-audit 0.22.2 and a freshly fetched advisory database
+reported exactly these three unsuppressed findings under the previous policy.
+With these exceptions applied, the audit passed with only the existing
+unmaintained/yanked warnings.
 An exception applies only to the described APIs, features, and dependency paths;
 it must be reviewed if any of those change.
+
+## Cache trust model
+
+Quipu trusts compiled-cache contents, including serialized native code. Malicious
+replacement of cache contents is outside the application's untrusted-input
+security boundary. YARA source files and scan targets remain untrusted inputs.
+Cache size, path, compatibility, and digest checks serve integrity and recovery
+purposes; an unkeyed digest does not authenticate data against someone who can
+replace both the artifact and its metadata.
+
+The current build writes portable Wasm caches because YARA-X's
+`native-code-serialization` feature is disabled. Its deserializer can still
+accept native-code payloads. This is consistent with the trusted-cache model;
+the serialization flag is not an input validation boundary. These exceptions
+preserve native-cache capability and do not change cache behavior or performance.
+Adding an untrusted compiled-rule import or changing the cache trust model
+requires a new security assessment before extending these exceptions to it.
 
 ## Monaco 0.57 JavaScript audit (2026-10-09)
 
@@ -135,6 +160,94 @@ existing high-severity CI audit threshold remains unchanged.
   Wasmtime version. Reassess on every YARA-X/Wasmtime update or feature change;
   enabling component async support invalidates this exception and requires an
   upgrade to a patched version first.
+
+## RUSTSEC-2026-0359: `wasmtime` 45.0.3
+
+- **Status:** Temporarily ignored in `.github/workflows/security.yml`.
+  The upstream fixes are in 48.0.6 and 49.0.3; YARA-X 1.21.0 constrains
+  Wasmtime to the unpatched 45.x line.
+- **Dependency path:** YARA-X compiles YARA conditions into core WebAssembly
+  and supplies the Rust host bindings used during scanning.
+- **Affected operation:** Dropping a long chain of concrete type references
+  recursively can overflow the native stack and abort the process. The upstream
+  [advisory](https://github.com/bytecodealliance/wasmtime/security/advisories/GHSA-wjc8-633q-pwxr)
+  lists no general workaround. Its
+  [fix and regression tests](https://github.com/bytecodealliance/wasmtime/pull/14735)
+  cover both guest-defined and Rust host-defined function-type chains.
+- **Exposure assessment:** The all-target Wasmtime feature graph enables no
+  `gc` feature. In Wasmtime 45.0.3, typed function references are disabled by
+  default and the `wasm_function_references` setter requires `gc`. YARA-X does
+  not enable them. Its host `FuncType::new` call builds signatures from static
+  exports whose arguments and results map to `i32`, `i64`, `f32`, and `f64`,
+  including numeric handles for YARA objects. Neither YARA rules nor scan targets
+  can supply concrete host type-reference chains. See the pinned
+  [ABI mapping](https://github.com/VirusTotal/yara-x/blob/7b2637d4655155fdfaf68177edadb9a39406ece0/lib/src/wasm/mod.rs#L579)
+  and [host linker](https://github.com/VirusTotal/yara-x/blob/7b2637d4655155fdfaf68177edadb9a39406ece0/lib/src/wasm/mod.rs#L847).
+  Cache restoration is covered by the [trusted-cache model](#cache-trust-model).
+- **Validation:** On 2026-10-15, a probe linked to Quipu's Wasmtime 45.0.3
+  library and using YARA-X's Linux engine settings rejected both 2-type and
+  20,000-type guest chains during validation and `Module::from_binary`, while
+  scalar baselines compiled and dropped successfully. A separate process
+  constructing 100,000 linked host types reproduced the stack-overflow abort.
+  Thus disabled guest features alone are insufficient: this exception also
+  depends on the scalar host ABI and trusted caches. `catch_unwind` does not
+  contain a stack-overflow abort.
+- **Removal condition:** Remove the exception when YARA-X permits a patched
+  Wasmtime release. Reassess on every YARA-X/Wasmtime update, on enabling GC or
+  typed function references, on introducing reference types or supertypes into
+  host bindings, on adding another Wasmtime consumer, or on changing cache trust.
+
+## RUSTSEC-2026-0362: `wasmtime` 45.0.3
+
+- **Status:** Temporarily ignored in `.github/workflows/security.yml`.
+  The upstream fixes are in 48.0.6 and 49.0.3; YARA-X 1.21.0 constrains
+  Wasmtime to the unpatched 45.x line.
+- **Dependency path:** YARA-X invokes Wasmtime while evaluating rule conditions.
+- **Affected operation:** Entering Wasm asynchronously, then re-entering it
+  synchronously from host callbacks, can suspend non-`Send` host values across
+  threads or cause runtime panics. The upstream
+  [advisory](https://github.com/bytecodealliance/wasmtime/security/advisories/GHSA-vcg5-q8m5-8379)
+  explicitly states that embedders not using async are unaffected.
+- **Exposure assessment:** Wasmtime's `async` feature is absent from the
+  all-target feature graph. YARA-X's
+  [native runtime adapter](https://github.com/VirusTotal/yara-x/blob/7b2637d4655155fdfaf68177edadb9a39406ece0/lib/src/wasm/runtime/native.rs)
+  uses synchronous `Linker::instantiate` and `func_new_unchecked` host callbacks;
+  its [scanner](https://github.com/VirusTotal/yara-x/blob/7b2637d4655155fdfaf68177edadb9a39406ece0/lib/src/scanner/context.rs#L480)
+  invokes synchronous `TypedFunc::call`. Quipu's Tokio runtime does not enable
+  Wasmtime's async execution machinery. Rechecked on 2026-10-15.
+- **Removal condition:** Remove the exception when YARA-X permits a patched
+  Wasmtime release. Reassess on every YARA-X/Wasmtime update or feature change,
+  and before introducing async Wasm calls, async host callbacks, or another
+  Wasmtime consumer.
+
+## RUSTSEC-2026-0363: `wasmtime` 45.0.3
+
+- **Status:** Temporarily ignored in `.github/workflows/security.yml`.
+  The upstream fixes are in 36.0.18, 48.0.6, and 49.0.3; YARA-X 1.21.0
+  constrains Wasmtime to the unpatched 45.x line.
+- **Dependency path:** YARA-X uses Wasmtime's core-Wasm runtime for compiled rules.
+- **Affected operation:** A malicious component can allocate unbounded host
+  memory through resource-handle tables across repeated component instances,
+  bypassing configured memory/table limits. See the upstream
+  [advisory](https://github.com/bytecodealliance/wasmtime/security/advisories/GHSA-q554-3cjc-rx7p).
+- **Exposure assessment:** Neither `component-model` nor
+  `component-model-async` is enabled in the all-target Wasmtime feature graph.
+  YARA-X constructs core-Wasm modules, not components, so the affected resource
+  handle tables are not part of Quipu's execution path. Rechecked on 2026-10-15.
+- **Removal condition:** Remove the exception when YARA-X permits a patched
+  Wasmtime release. Reassess on every YARA-X/Wasmtime update or feature change,
+  and before enabling any component support or adding another Wasmtime consumer.
+
+To recheck the feature assumptions above, run from `app/src-tauri` after fetching
+the locked dependencies:
+
+```sh
+cargo tree --locked --offline --target all -e features -i wasmtime
+```
+
+The resolved features must continue to exclude `async`, `gc`, `component-model`,
+and `component-model-async`. This graph check supplements the source review of
+YARA-X's host ABI and call sites; it does not establish those properties alone.
 
 ## Non-failing informational warnings
 
