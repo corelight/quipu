@@ -71,6 +71,13 @@ deployment, test each chosen installer format on a disposable Windows VM with
 WebView2 absent and networking disabled, then launch Quipu, open the bundled
 documentation, and compile and scan a bundled example.
 
+On 2026-10-17, the user confirmed offline Windows installer validation using
+[the artifact from `f500f1b`](https://github.com/corelight/quipu/actions/runs/38970001562/artifacts/12076879377).
+The requested validation was installation with WebView2 absent and networking
+disabled, followed by launch, offline help, and compiling and scanning a bundled
+example. The confirmation did not identify the installer format or Windows
+version; it does not establish separate results for both NSIS and MSI.
+
 Installers are currently unsigned, matching the Linux distribution policy.
 Authenticode signing can be configured separately with protected release
 credentials. Keep `bundle.windows.wix.upgradeCode` stable across releases so MSI
