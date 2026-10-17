@@ -272,3 +272,49 @@ above before the audit can pass.
 These exceptions do not claim that the advisories are unimportant or that all
 uses of an affected release are safe. They record the narrowly reviewed reasons
 the current Quipu build is allowed to retain those dependencies.
+
+## RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369: `zip` 8.6.0
+
+- **Status:** Temporarily ignored in `.github/workflows/security.yml`, assessed
+  on 2026-10-17 during 0.4.0 preparation. RustSec identifies `zip` 9.0.0 or later
+  as patched; YARA-X 1.21.0 requires the incompatible 8.x series.
+- **Dependency path:** `zip` is used only by YARA-X in the all-target locked
+  dependency graph. The language server enables YARA-X's default modules,
+  including `crx-module`; the exception does not assume this module is disabled.
+- **Affected operations:** RUSTSEC-2026-0367 concerns preserving privileged Unix
+  permission bits during filesystem extraction. RUSTSEC-2026-0368 concerns
+  creating symlinks targeting paths outside the extraction directory.
+  RUSTSEC-2026-0369 concerns applying permissions through extracted symlinks.
+  These advisories affect `ZipArchive::extract()` and/or the stream extraction
+  API, which materialize archive entries on disk.
+- **Exposure assessment:** YARA-X's CRX parser constructs
+  `ZipArchive<Cursor<&[u8]>>` over scan-target bytes. It reads `manifest.json`
+  with `by_name`, and locale JSON with `index_for_path` and `by_index`, passing
+  entry readers directly to `serde_json::from_reader`. It does not extract
+  entries to disk, create archive-provided symlinks, or apply archive-provided
+  permissions. No Quipu source calls the `zip` crate or its extraction APIs.
+  YARA-X's separate ZIP/VBA modules use `tinyzip`, not this crate. The upstream
+  test and benchmark helpers likewise read ZIP entries into memory.
+- **Validation:** `cargo tree --locked --offline --target all -i zip` identifies
+  YARA-X 1.21.0 as the sole direct consumer. The corresponding feature tree
+  confirms `crx-module` is enabled through `yara-x-ls`. Source inspection of
+  the pinned YARA-X release finds its production `zip` API calls only in the
+  CRX parser and no filesystem extraction calls. The initial 0.4.0 audit
+  reported exactly these three unsuppressed vulnerabilities. With the scoped
+  exceptions, cargo-audit 0.22.2 and a freshly fetched database pass with only
+  the existing three informational warnings. All 14 workflow exceptions have
+  matching documentation. No dependency versions or application behavior are
+  changed by these exceptions.
+- **Removal condition:** Remove these exceptions when a supported coordinated
+  YARA-X compiler/parser/language-server update uses patched `zip` or removes
+  the dependency. Reassess before changing ZIP consumers, introducing archive
+  extraction, or upgrading YARA-X. These exceptions cover only the three
+  filesystem-extraction advisories, not arbitrary ZIP parsing vulnerabilities.
+
+References:
+
+- [RUSTSEC-2026-0367](https://rustsec.org/advisories/RUSTSEC-2026-0367.html)
+- [RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368.html)
+- [RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369.html)
+- [YARA-X 1.21.0 CRX parser](https://github.com/VirusTotal/yara-x/blob/v1.21.0/lib/src/modules/crx/parser.rs)
+- [YARA-X 1.21.0 dependency requirement](https://github.com/VirusTotal/yara-x/blob/v1.21.0/Cargo.toml)
