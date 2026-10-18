@@ -15,8 +15,9 @@ Release binaries must not be added to the repository or Git LFS.
    changes, the applicable native-menu acceptance scenarios.
 5. Run the **Release** workflow manually on the preparation branch and inspect
    the combined `quipu-release` artifact. It must contain AppImage, DEB, RPM,
-   NSIS `.exe`, MSI `.msi`, and a `SHA256SUMS` covering all five packages with
-   matching hashes and versions. A manual run does not publish a release.
+   standard NSIS `.exe` and MSI `.msi`, offline `-offline.exe` and
+   `-offline.msi`, and a `SHA256SUMS` covering all seven packages with matching
+   hashes and versions. A manual run does not publish a release.
 6. Merge the reviewed release preparation to the default branch.
 
 ## Publish
@@ -24,8 +25,8 @@ Release binaries must not be added to the repository or Git LFS.
 Create one annotated tag on the exact reviewed commit and push it:
 
 ```bash
-git tag -a v0.3.0 -m "Release 0.3.0"
-git push origin v0.3.0
+git tag -a v0.4.0 -m "Release 0.4.0"
+git push origin v0.4.0
 ```
 
 The tag must be `v` followed by the exact version in `app/package.json`. The
