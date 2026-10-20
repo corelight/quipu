@@ -7,7 +7,7 @@ corresponding npm package contents. The notices below do not change the
 licensing terms of Quipu itself.
 
 -------------------------------------------------------------------------------
-@tauri-apps/api 2.12.2
+@tauri-apps/api 2.12.4
 Declared license: Apache-2.0 OR MIT
 Source: https://github.com/tauri-apps/tauri#readme
 
@@ -239,7 +239,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/tauri.git
 Creator: Person: Daniel Thompson-Yvetot
 
 -------------------------------------------------------------------------------
-@tauri-apps/plugin-dialog 2.8.1
+@tauri-apps/plugin-dialog 2.8.3
 Declared license: MIT OR Apache-2.0
 Source: https://github.com/tauri-apps/plugins-workspace
 
@@ -267,7 +267,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/tauri.git
 Creator: Person: Daniel Thompson-Yvetot
 
 -------------------------------------------------------------------------------
-@tauri-apps/plugin-opener 2.7.0
+@tauri-apps/plugin-opener 2.7.2
 Declared license: MIT OR Apache-2.0
 Source: https://github.com/tauri-apps/plugins-workspace
 

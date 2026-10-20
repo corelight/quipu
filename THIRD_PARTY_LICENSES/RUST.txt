@@ -9240,9 +9240,9 @@ Used by:
 - syn 3.0.4 — https://github.com/dtolnay/syn
 - tauri-codegen 2.7.1 — https://github.com/tauri-apps/tauri
 - tauri-macros 2.7.1 — https://github.com/tauri-apps/tauri
-- tauri-plugin-dialog 2.8.1 — https://github.com/tauri-apps/plugins-workspace
-- tauri-plugin-fs 2.6.0 — https://github.com/tauri-apps/plugins-workspace
-- tauri-plugin-opener 2.7.0 — https://github.com/tauri-apps/plugins-workspace
+- tauri-plugin-dialog 2.8.3 — https://github.com/tauri-apps/plugins-workspace
+- tauri-plugin-fs 2.7.1 — https://github.com/tauri-apps/plugins-workspace
+- tauri-plugin-opener 2.7.2 — https://github.com/tauri-apps/plugins-workspace
 - tauri-runtime-wry 2.12.1 — https://github.com/tauri-apps/tauri
 - tauri-runtime 2.12.1 — https://github.com/tauri-apps/tauri
 - tauri-utils 2.10.1 — https://github.com/tauri-apps/tauri
