@@ -991,9 +991,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 -------------------------------------------------------------------------------
-vscode-jsonrpc 9.0.3
+vscode-jsonrpc 10.0.0
 Declared license: MIT
-Source: https://github.com/Microsoft/vscode-languageserver-node.git
+Source: https://github.com/microsoft/vscode-languageserver-node/tree/main/jsonrpc
 
 [License.txt]
 
