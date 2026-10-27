@@ -97,11 +97,17 @@ def main():
     with tempfile.TemporaryDirectory(prefix="quipu-editor-test-") as tmp:
         subprocess.run([
             "node", "--input-type=module", "-e",
-            "import {build} from 'vite'; await build({configFile: false, "
+            "import {build} from 'vite'; await build({configFile: 'vite.config.ts', publicDir: false, "
             "root: 'test/editor', build: {target: 'esnext', "
-            "outDir: process.argv[1], emptyOutDir: true, chunkSizeWarningLimit: 5000}})",
+            "outDir: process.argv[1], emptyOutDir: true, chunkSizeWarningLimit: 5000, "
+            "minify: false}})",
             tmp,
         ], cwd=ROOT / "app", check=True)
+        # Inspect the emitted fixture, which uses the production Vite config:
+        # an npm override alone would leave Monaco's vendored sanitizer in it.
+        scripts = "\n".join(p.read_text() for p in Path(tmp).rglob("*.js"))
+        assert 'DOMPurify.version = "3.4.17"' in scripts, "Patched sanitizer missing"
+        assert 'DOMPurify.version = "3.4.15"' not in scripts, "Vendored sanitizer still bundled"
         server = ThreadingHTTPServer(("127.0.0.1", 0), partial(Handler, directory=tmp))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()

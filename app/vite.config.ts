@@ -1,8 +1,19 @@
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
 
 // Tauri expects a fixed dev port and the production assets in dist/.
 export default defineConfig({
   clearScreen: false,
+  resolve: {
+    alias: [
+      // Monaco vendors DOMPurify; an npm override alone does not fix its runtime
+      // sanitizer. Route that embedded module to our patched, locked package.
+      {
+        find: /^\.\/dompurify\/dompurify\.js$/,
+        replacement: fileURLToPath(new URL("./node_modules/dompurify/dist/purify.es.mjs", import.meta.url)),
+      },
+    ],
+  },
   // Zola writes the offline help site under generated/docs. Treating that as
   // Vite's public tree puts it at /docs in both development and frontendDist,
   // where Tauri embeds it alongside the application frontend.
