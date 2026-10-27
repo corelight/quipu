@@ -116,7 +116,7 @@ Every one of these reports is *project-scoped*, and that is not incidental: the 
 
 ## Include resolution
 
-Include directives are extracted with `yara-x-parser` - the same parser the compiler uses, pinned to the same `v1.20.0` tag as `yara-x` and `yara-x-ls` - through its public AST. Nothing scans lines, matches regexes or reads `Debug` output. The parser recovers from errors, so a file with a broken rule still contributes the includes it declares, which keeps a partially broken project navigable.
+Include directives are extracted with `yara-x-parser` - the same parser the compiler uses, pinned to the same `v1.22.1` tag as `yara-x` and `yara-x-ls` - through its public AST. Nothing scans lines, matches regexes or reads `Debug` output. The parser recovers from errors, so a file with a broken rule still contributes the includes it declares, which keeps a partially broken project navigable.
 
 For an `include` in file A, candidates are tried in this order:
 

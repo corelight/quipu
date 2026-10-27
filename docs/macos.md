@@ -39,7 +39,7 @@ runtime for Developer ID distribution, review Wasmtime's JIT entitlement needs,
 add the appropriate entitlements, and test real compilation/scanning in the
 signed app. Signing and notarization are separate follow-up work.
 
-Install Xcode Command Line Tools (`xcode-select --install`), Rust 1.93 or newer,
+Install Xcode Command Line Tools (`xcode-select --install`), Rust 1.95 or newer,
 Node.js 22.12 or newer, Git, and Zola 0.23.6 on `PATH`. On macOS 15 or newer,
 from the repository root:
 
