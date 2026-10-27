@@ -324,7 +324,7 @@ Source: https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/tru
     SOFTWARE
 
 -------------------------------------------------------------------------------
-dompurify 3.4.15
+dompurify 3.4.17
 Declared license: (MPL-2.0 OR Apache-2.0)
 Source: https://github.com/cure53/DOMPurify
 
@@ -991,9 +991,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 -------------------------------------------------------------------------------
-vscode-jsonrpc 9.0.3
+vscode-jsonrpc 10.0.0
 Declared license: MIT
-Source: https://github.com/Microsoft/vscode-languageserver-node.git
+Source: https://github.com/microsoft/vscode-languageserver-node/tree/main/jsonrpc
 
 [License.txt]
 
