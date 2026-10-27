@@ -40,19 +40,24 @@ upgrade preserves native-cache capability and the existing cache trust model.
 Adding an untrusted compiled-rule import or changing the cache trust model
 requires a new security assessment before extending these exceptions to it.
 
-## Monaco 0.57 JavaScript audit (2026-10-09)
+## Monaco 0.57 JavaScript audit (2026-10-27)
 
-The upgrade introduces explicit `marked` 14.0.0 and `dompurify` 3.4.15
-dependencies. npm reports two low-severity DOMPurify advisories,
-[GHSA-p98j-92pf-mc4p](https://github.com/advisories/GHSA-p98j-92pf-mc4p) and
-[GHSA-6688-9rhm-gjv2](https://github.com/advisories/GHSA-6688-9rhm-gjv2), also
-attributed transitively to Monaco. Both require `IN_PLACE` sanitization. Monaco's
-Markdown renderer passes strings through `domSanitize` without enabling that
-option; Quipu does not call DOMPurify directly. Monaco also embeds its own copy
-of DOMPurify 3.4.15, so overriding the npm dependency alone would not replace
-the sanitizer used by editor hovers. Recheck this assessment when upgrading
-Monaco or adding custom HTML sanitization. No audit suppression is added; the
-existing high-severity CI audit threshold remains unchanged.
+Monaco 0.57.0 pins DOMPurify 3.4.15 and embeds a separate copy of that version.
+The October advisories include critical SAFE_FOR_TEMPLATES and high-severity
+IN_PLACE findings (GHSA-cg2g-xh64-v4q7 and GHSA-mrv2-3pqr-j5jr), in addition
+to GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2, and GHSA-c6gr-qvv4-5v3f.
+
+Quipu pins patched DOMPurify 3.4.17 directly and overrides Monaco's npm
+requirement to that same package. The Vite alias in `app/vite.config.ts` also
+replaces Monaco's embedded sanitizer import with the patched ESM module in
+both development and production. The override alone would leave the vulnerable
+embedded code in editor hovers. No audit suppression or threshold change is used.
+
+The browser editor regression uses the production Vite configuration, checks
+that its emitted JavaScript contains 3.4.17 rather than the vendored 3.4.15,
+and exercises real completion and hover rendering under the application's CSP.
+Recheck the alias, sanitizer version, and browser test on every Monaco update.
+Remove the override and alias when Monaco itself ships a patched sanitizer.
 
 ## RUSTSEC-2023-0071: `rsa` 0.10.0-rc.19
 
