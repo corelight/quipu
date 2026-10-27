@@ -9,6 +9,11 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Use patched DOMPurify 3.4.17 for Monaco's Markdown rendering, including the
+  sanitizer embedded in editor hovers.
+
 ## [0.4.0] - 2026-10-17
 
 ### Changed
