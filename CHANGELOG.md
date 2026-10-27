@@ -9,6 +9,13 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade the YARA-X compiler, include parser, and language server together to
+  1.22.1, adding 64-bit integer functions, improving completion documentation,
+  and fixing regex compiler panics. Compiled caches from older engine versions
+  require recompilation. Building from source now requires Rust 1.95 or newer.
+
 ## [0.4.0] - 2026-10-17
 
 ### Changed

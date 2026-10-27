@@ -5,7 +5,7 @@ name = "quipu"
 # and is intentionally pinned (it only appears in Rust crate metadata).
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.93"
+rust-version = "1.95"
 authors = ["Corelight, Inc."]
 description = "A desktop workbench for writing, validating, compiling, and testing YARA rules."
 license = "BSD-3-Clause"
@@ -31,16 +31,16 @@ tokio-util = { version = "0.7", features = ["compat"] }
 # tag. (yara-x-ls — the language server we embed — is not published to
 # crates.io, so a git dependency is the only way to get it; we pin the lib to
 # the same tag for consistency.) Cargo fetches + locks this; no sibling checkout.
-yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.22.0" }
+yara-x-ls = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.22.1" }
 
 # The project model parses `include` directives with YARA-X's own parser, so
 # Quipu's include graph cannot drift from what the compiler accepts. Same repo
 # and tag as yara-x/yara-x-ls; Cargo resolves all three to one checkout.
-yara-x-parser = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.21.0" }
+yara-x-parser = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.22.1" }
 
 # Same minimal feature set proven in crates/yexer (Phase 0):
 # magic-module OFF (libmagic), native-code-serialization OFF (portable .yarc).
-yara-x = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.21.0", default-features = false, features = [
+yara-x = { git = "https://github.com/VirusTotal/yara-x", tag = "v1.22.1", default-features = false, features = [
     "constant-folding",
     "exact-atoms",
     "fast-regexp",
