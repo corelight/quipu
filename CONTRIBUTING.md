@@ -27,7 +27,7 @@ npm run tauri -- dev
 The first Rust build takes longer because it compiles YARA-X and its
 dependencies from source.
 
-Experimental Apple Silicon and Intel macOS builds are described in
+Apple Silicon and Intel macOS builds are described in
 [macOS development](docs/macos.md), including prerequisites and desktop checks.
 
 ## Required checks
@@ -126,7 +126,8 @@ runtime packages.
 CI calls reusable [Linux](.github/workflows/linux-build.yml),
 [Windows](.github/workflows/windows-build.yml), and
 [macOS](.github/workflows/macos-build.yml) workflows. Linux and Windows are also
-called by Release; macOS remains experimental and outside release publication.
+called by Release; macOS artifacts from the matching main CI run are signed
+separately in the maintainer's private repository and added to the release draft.
 
 Linux tests and packages on Ubuntu 22.04 to preserve the release glibc baseline.
 It checks formatting, Clippy, frontend/Rust tests and license notices, builds
@@ -138,8 +139,10 @@ also supports manual dispatch once present on the default branch.
 The existing required **Rust** check is a compatibility gate: it succeeds only
 when the complete reusable Linux job succeeds. Failures, cancellations and skips
 cannot satisfy it. This retains branch protection without duplicating the build.
-Release waits for both Linux and Windows before assembling checksums; publication
-remains restricted to version tags and the existing release environment.
+Release stages Linux and Windows packages as a draft after the existing release
+environment approval. The maintainer adds verified signed DMGs and publishes
+only after manual acceptance; see [Releasing](docs/releasing.md).
+Release validation tools are checked with `python3 -m unittest discover -s tests -v`.
 
 ## Change guidelines
 
