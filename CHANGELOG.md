@@ -9,6 +9,23 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+### Added
+
+- macOS 15+ release packages for Apple Silicon and Intel, signed with Developer
+  ID, notarized by Apple, and stapled for distribution outside the App Store.
+- Draft release assembly with verified signing provenance and one checksum
+  manifest covering all Linux, Windows, and macOS packages.
+
+### Changed
+
+- Upgrade the YARA-X compiler, parser, and language server together to 1.22.1.
+  Recompile rules cached by earlier engine versions.
+- Update Tauri, Tokio, Vite, and vscode-jsonrpc dependencies, and use Rust 1.95
+  for builds. Dependency security fixes and exceptions are recorded in
+  `docs/dependency-security.md`.
+
 ### Changed
 
 - Upgrade the YARA-X compiler, include parser, and language server together to
@@ -79,7 +96,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bundled example projects and offline documentation.
 - A bounded compiled-rules cache.
 
-[Unreleased]: https://github.com/corelight/quipu/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/corelight/quipu/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/corelight/quipu/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/corelight/quipu/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/corelight/quipu/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/corelight/quipu/releases/tag/v0.2.0

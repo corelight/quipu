@@ -18,11 +18,10 @@ embeds both [YARA-X](https://github.com/VirusTotal/yara-x) and its language
 server, so you do not need a separate YARA installation.
 
 > [!IMPORTANT]
-> Quipu is at MVP stage. Builds target Linux and Windows x86-64.
+> Quipu is at MVP stage. Builds target Linux/Windows x86-64 and macOS 15+ Apple Silicon/Intel.
 > Windows desktop validation covers Windows 11 24H2; see the
 > [validation record](docs/windows.md#validation-status).
-> [Experimental macOS builds](docs/macos.md) have CI coverage and user-confirmed
-> build validation; see the [validation record](docs/macos.md#validation-status).
+> [Signed macOS packages](docs/macos.md) use Developer ID and Apple notarization; see the [validation record](docs/macos.md#validation-status).
 
 ![Quipu showing a compiled YARA project and two matching scan results](docs/images/quipu-workbench.png)
 
@@ -113,13 +112,14 @@ If a compiled ruleset is forgotten after restarting, check the bundled guide's
 It explains how to confirm a quarantine and, if needed, exclude only the cache
 directory.
 
-## Experimental macOS builds
+## macOS packages
 
-The CI workflow builds ad-hoc signed DMGs for Apple Silicon and Intel, targeting
-macOS 15 or newer. They do not require an Apple Developer membership to build,
-but are not notarized and may require a Gatekeeper override to launch.
-See [macOS development](docs/macos.md) for CI artifacts, build instructions,
-and the current validation status.
+Release DMGs for Apple Silicon and Intel target macOS 15 or newer. The app and
+DMG are Developer ID signed, notarized by Apple, and stapled. Download the
+appropriate DMG from [Releases](https://github.com/corelight/quipu/releases),
+then drag Quipu into Applications. Ordinary CI artifacts use ad-hoc signatures
+and are intended for development. See [macOS](docs/macos.md) for installation,
+build instructions, and the current validation status.
 
 ## Quick start
 
@@ -163,7 +163,7 @@ All platforms need:
 For Windows, follow [Windows development](docs/windows.md) for the MSVC build
 tools, Windows SDK, WebView2 runtime, and PowerShell build commands.
 
-For experimental macOS builds, follow [macOS development](docs/macos.md).
+For macOS builds, follow [macOS development](docs/macos.md).
 
 Linux also needs the native libraries required by Tauri and WebKitGTK.
 
@@ -249,8 +249,7 @@ value when it names packages and reports the running version.
 
 ## Current limitations
 
-- Release packages target Linux and Windows x86-64. macOS Apple Silicon and Intel
-  builds remain experimental CI artifacts; see the
+- macOS requires version 15 or newer; see the
   [macOS validation record](docs/macos.md#validation-status).
 - Quipu scans one selected file or one text buffer at a time, not directories
   or batches.

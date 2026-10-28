@@ -1,13 +1,33 @@
-# Experimental macOS builds
+# macOS packages and development
 
 macOS builds target Apple Silicon (`aarch64`) and Intel (`x86_64`) separately,
 using native GitHub-hosted `macos-15` and `macos-15-intel` runners. The initial
 minimum OS version is macOS 15, matching CI; older versions are not validated.
 The reusable [macOS workflow](../.github/workflows/macos-build.yml) runs from CI
 on pushes and pull requests, and also supports manual dispatch. These packages
-are experimental CI artifacts, not part of the release workflow.
+are experimental CI artifacts, not part of the regular release workflow.
+Separately signed and notarized packages are available in the
+[macOS testing prerelease](https://github.com/corelight/quipu/releases/tag/macos-signing-test-1).
 
 ## Download and run
+
+Download the appropriate DMG from [Releases](https://github.com/corelight/quipu/releases):
+`aarch64` for Apple Silicon or `x64` for Intel. Normal release DMGs require macOS
+15 or later and are signed by `Developer ID Application: Simeon Miteff (VR3SPLHD2A)`.
+Both the app and DMG are notarized and stapled. Compare `shasum -a 256 <filename>`
+with the matching entry in the release's `SHA256SUMS`.
+
+Download through a browser, open the DMG, drag Quipu into Applications, then
+launch the installed copy from Finder. An ordinary internet-download confirmation
+with an **Open** button is expected. If launch is blocked, record the exact
+message before attempting an override; do not remove quarantine or disable
+Gatekeeper for acceptance testing.
+
+The [initial testing prerelease](https://github.com/corelight/quipu/releases/tag/macos-signing-test-1)
+contains signed 0.4.0 builds from `7940dde280080bae3260bd9f487e3544d87c75ae`,
+after the stable 0.4.0 tag. Production releases require an exact tag/source match.
+
+### Ordinary CI artifacts
 
 From a successful [CI run](https://github.com/corelight/quipu/actions/workflows/ci.yml),
 download `quipu-macos-aarch64` for Apple Silicon or `quipu-macos-x86_64` for Intel.
@@ -30,14 +50,16 @@ prevent this override. Do not disable Gatekeeper globally.
 An Apple Developer Program membership is not needed to compile the app, create
 a DMG, or apply the local ad-hoc signature (`signingIdentity: "-"`). No Apple
 account or signing secrets are used by CI. Membership is needed for Developer ID
-distribution and notarization, which would remove this development-build
+distribution and notarization, which remove this development-build
 installation friction.
 
 The platform config deliberately disables hardened runtime for these ad-hoc
-builds: YARA-X uses Wasmtime to execute generated code. Before enabling hardened
-runtime for Developer ID distribution, review Wasmtime's JIT entitlement needs,
-add the appropriate entitlements, and test real compilation/scanning in the
-signed app. Signing and notarization are separate follow-up work.
+builds: YARA-X uses Wasmtime to execute generated code. The private Developer ID
+signing workflow enables hardened runtime with the reviewed Wasmtime entitlement.
+Real compilation/scanning in the signed app remains a desktop acceptance check.
+See the
+[Developer ID setup guide](macos-signing.md) for the private signing repository,
+certificate creation steps, and signed-build validation requirements.
 
 Install Xcode Command Line Tools (`xcode-select --install`), Rust 1.95 or newer,
 Node.js 22.12 or newer, Git, and Zola 0.23.6 on `PATH`. On macOS 15 or newer,
@@ -70,6 +92,16 @@ Receipts are bounded to 4096 paths and cleared on project changes; eviction or a
 failed check can cause an extra refresh.
 
 ## Validation status
+
+The signed testing prerelease passed automated signature, notarization,
+stapling, Gatekeeper, and final mounted-app checks on both architectures in
+signing run `39870818723`. On 2026-10-23, the maintainer confirmed installation,
+launch, and signature/notarization assessment checks in a macOS VM. The DMG
+arrived via `scp`, so that launch does not establish browser-download Gatekeeper
+behavior. A coworker subsequently confirmed use of the signed DMG on an Apple Silicon
+Mac without issues; the browser-download prompt recognized Apple notarization.
+The new YARA-X 1.22.1 release requires fresh full acceptance; see
+[0.5.0 testing](release-testing-0.5.0.md).
 
 The workflow runs frontend tests, builds the frontend and bundled documentation,
 runs Clippy and Rust tests (including YARA compilation/scanning and filesystem
