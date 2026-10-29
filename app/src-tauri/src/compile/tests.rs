@@ -118,7 +118,7 @@ fn a_scratch_include_cannot_reach_the_launch_directory() {
         // directory.
         let mut bare = Compiler::new();
         let _ = bare.add_source(SourceCode::from(source));
-        let unsealed = finish(bare, &Origins::default());
+        let unsealed = finish(bare, &Origins::default(), Vec::new());
 
         (unsealed, scratch(source))
     });
@@ -371,6 +371,154 @@ fn a_project_with_nothing_to_compile_succeeds_with_zero_rules() {
 }
 
 // --- Failures --------------------------------------------------------------
+
+#[test]
+fn parser_errors_preserve_other_files_errors_and_warnings_in_either_order() {
+    for (bytes, code) in [
+        (
+            b"rule bad { meta: author = \"Bj\xf8rn\" condition: true }\n".as_slice(),
+            "E032",
+        ),
+        (b"rule bad { condition: }\n".as_slice(), "E001"),
+    ] {
+        for bad_file in ["a-bad.yar", "z-bad.yar"] {
+            let fixture = Fixture::new();
+            std::fs::write(fixture.root.join(bad_file), bytes).expect("write broken source");
+            fixture.write(
+                "error.yar",
+                "rule semantic_error { condition: missing_identifier }\n",
+            );
+            fixture.write(
+                "warning.yar",
+                "import \"pe\"\nimport \"pe\"\nrule warning_rule { condition: pe.is_pe }\n",
+            );
+
+            let compiled = project(&fixture.root);
+
+            assert!(compiled.rules.is_none());
+            assert_eq!(compiled.rule_count, 0);
+            assert_eq!(compiled.diagnostics.len(), 3, "{}", summary(&compiled));
+            for (expected_code, file, severity) in [
+                (code, bad_file, "error"),
+                ("E009", "error.yar", "error"),
+                ("duplicate_import", "warning.yar", "warning"),
+            ] {
+                let diagnostic = compiled
+                    .diagnostics
+                    .iter()
+                    .find(|d| d.code == expected_code)
+                    .unwrap_or_else(|| panic!("missing {expected_code}: {}", summary(&compiled)));
+                assert_eq!(
+                    diagnostic.file.as_deref(),
+                    Some(fixture.path_text(file).as_str())
+                );
+                assert_eq!(diagnostic.severity, severity);
+                assert!(diagnostic.line > 0 && diagnostic.column > 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn a_syntax_error_preserves_recoverable_diagnostics_in_the_same_file() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "main.yar",
+        "import \"pe\"\nimport \"pe\"\n\
+         rule bad { condition: }\n\
+         rule semantic_error { condition: missing_identifier }\n",
+    );
+
+    let compiled = project(&fixture.root);
+
+    assert!(compiled.rules.is_none());
+    assert_eq!(compiled.rule_count, 0);
+    let mut actual = codes(&compiled);
+    actual.sort();
+    assert_eq!(actual, ["E001", "E009", "duplicate_import"]);
+    assert!(
+        compiled
+            .diagnostics
+            .iter()
+            .all(|d| { d.file.as_deref() == Some(fixture.path_text("main.yar").as_str()) })
+    );
+}
+
+#[test]
+fn invalid_utf8_in_an_include_preserves_other_entrypoints_diagnostics() {
+    let fixture = Fixture::new();
+    fixture.write("nested/main.yar", "include \"bad.inc\"\n");
+    std::fs::write(fixture.root.join("nested/bad.inc"), b"// \xff\n").expect("write invalid UTF-8");
+    fixture.write(
+        "error.yar",
+        "rule semantic_error { condition: missing_identifier }\n",
+    );
+
+    let compiled = project(&fixture.root);
+
+    assert!(compiled.rules.is_none());
+    assert_eq!(compiled.rule_count, 0);
+    assert_eq!(codes(&compiled), ["E009", "E032"]);
+    let invalid = &compiled.diagnostics[1];
+    assert_eq!(
+        invalid.file.as_deref(),
+        Some(fixture.path_text("nested/bad.inc").as_str())
+    );
+    assert_eq!((invalid.line, invalid.column), (1, 4));
+}
+
+#[test]
+fn a_repaired_source_after_rejection_cannot_produce_rules() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", "rule bad { condition: }\n");
+    let failure = project_plan(&fixture.root).expect_err("parser error rejects the plan");
+
+    fixture.write("main.yar", &rule("repaired"));
+    let compiled = failure.diagnose();
+
+    let diagnostic = expect_failure(&compiled);
+    assert_eq!(diagnostic.code, "parser-error");
+    assert_eq!(
+        diagnostic.file.as_deref(),
+        Some(fixture.path_text("main.yar").as_str())
+    );
+}
+
+#[test]
+fn parser_errors_do_not_bypass_structural_plan_rejections() {
+    for (source, expected) in [
+        ("include \"missing.yar\"\n", "missing-include"),
+        ("include \"main.yar\"\n", "include-cycle"),
+        (
+            "include \"lib.yar\"\ninclude \"lib.yar\"\n",
+            "repeated-inclusion",
+        ),
+    ] {
+        let fixture = Fixture::new();
+        fixture.write("main.yar", &format!("{source}rule bad {{ condition: }}\n"));
+        fixture.manifest("schema = 1\nentrypoints = [\"main.yar\", \"semantic.yar\"]\n");
+        fixture.write("lib.yar", &rule("library"));
+        fixture.write(
+            "semantic.yar",
+            "rule semantic_error { condition: missing_identifier }\n",
+        );
+
+        let compiled = project(&fixture.root);
+
+        assert!(compiled.rules.is_none());
+        assert_eq!(compiled.rule_count, 0);
+        assert!(
+            codes(&compiled).contains(&expected),
+            "{}",
+            summary(&compiled)
+        );
+        assert!(codes(&compiled).contains(&"parser-error"));
+        assert!(
+            !codes(&compiled).contains(&"E009"),
+            "structural errors must stop YARA-X"
+        );
+    }
+}
 
 #[test]
 fn a_plan_rejection_is_reported_without_invoking_yara_x() {

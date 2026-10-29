@@ -335,6 +335,93 @@ fn a_newer_compile_supersedes_an_older_one_still_in_flight() {
 // --- Project cache integration --------------------------------------------
 
 #[test]
+fn parser_failures_report_other_diagnostics_without_installing_or_caching_rules() {
+    for bad in [
+        b"rule bad { meta: author = \"Bj\xf8rn\" condition: true }\n".as_slice(),
+        b"rule bad { condition: }\n".as_slice(),
+    ] {
+        let fixture = Fixture::new();
+        fixture.write("main.yar", &rule("previously_compiled"));
+        let cache = cache_for(&fixture);
+        let shared = new_shared_rules();
+        let initial = block_on(store_project(&shared, &cache, fixture.root.clone()))
+            .expect("compile and cache the valid workspace");
+        assert!(initial.ok && stored(&shared));
+        let metadata_path = cache
+            .effective_path()
+            .join("projects")
+            .join(crate::cache::ProjectId::for_root(&fixture.root).as_str())
+            .join("default/metadata.json");
+        let metadata = std::fs::read(&metadata_path).expect("initial cache metadata");
+
+        std::fs::write(fixture.root.join("main.yar"), bad).expect("break the source");
+        fixture.write(
+            "error.yar",
+            "rule semantic_error { condition: missing_identifier }\n",
+        );
+        fixture.write(
+            "warning.yar",
+            "import \"pe\"\nimport \"pe\"\nrule warning_rule { condition: pe.is_pe }\n",
+        );
+        let response = block_on(store_project(&shared, &cache, fixture.root.clone()))
+            .expect("a diagnostic failure is not an IPC failure");
+
+        assert!(!response.ok);
+        assert_eq!(response.rule_count, 0);
+        assert_eq!(response.diagnostics.len(), 3, "{:?}", response.diagnostics);
+        assert!(response.diagnostics.iter().any(|d| d.code == "E009"));
+        assert!(
+            response
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "duplicate_import")
+        );
+        assert!(
+            !stored(&shared),
+            "Scan cannot use the old or a partial ruleset"
+        );
+        assert_eq!(
+            std::fs::read(metadata_path).expect("cache metadata"),
+            metadata
+        );
+        assert!(matches!(
+            restore_work(&cache, &fixture.root, || {}),
+            RestoreWork::Status(CacheRestore::Miss)
+        ));
+    }
+}
+
+#[test]
+fn a_parser_error_appearing_after_a_cache_hit_collects_diagnostics_instead() {
+    let fixture = Fixture::new();
+    fixture.write("main.yar", &rule("cached"));
+    let cache = cache_for(&fixture);
+    seed_project_cache(&cache, &fixture.root);
+
+    let work = project_work_with(
+        &cache,
+        &fixture.root,
+        |_| panic!("a rejected project must not enter the rules-building path"),
+        || {
+            fixture.write(
+                "main.yar",
+                "rule bad { condition: }\nrule semantic_error { condition: missing_identifier }\n",
+            );
+        },
+        || panic!("a failed compilation cannot persist rules"),
+    );
+
+    let ProjectWork::Failed(compiled) = work else {
+        panic!("the stale cache hit must not become a ready ruleset");
+    };
+    assert!(compiled.rules.is_none());
+    assert_eq!(compiled.rule_count, 0);
+    assert_eq!(compiled.diagnostics.len(), 2);
+    assert!(compiled.diagnostics.iter().any(|d| d.code == "E001"));
+    assert!(compiled.diagnostics.iter().any(|d| d.code == "E009"));
+}
+
+#[test]
 fn a_compile_miss_invokes_yara_once_and_the_next_hit_not_at_all() {
     let fixture = Fixture::new();
     fixture.write("main.yar", &rule("cached"));

@@ -161,6 +161,17 @@ impl ProjectSnapshot {
     /// contain stays in the snapshot and does not block the plan: that is what
     /// lets explicit entrypoints compile while an unrelated file is broken.
     pub(crate) fn compilation_plan(&self) -> Result<CompilationPlan, PlanRejection> {
+        self.plan(false)
+    }
+
+    /// Inputs for a diagnostics-only compiler pass. Parser errors are allowed
+    /// so YARA-X can recover further diagnostics; all graph and configuration
+    /// checks still apply. This plan must not be used to build or cache rules.
+    pub(crate) fn diagnostic_plan(&self) -> Result<CompilationPlan, PlanRejection> {
+        self.plan(true)
+    }
+
+    fn plan(&self, allow_parser_errors: bool) -> Result<CompilationPlan, PlanRejection> {
         let closure_ids = self.closure_of(self.entrypoints());
         let in_closure: HashSet<&SourceId> = closure_ids.iter().collect();
 
@@ -176,7 +187,9 @@ impl ProjectSnapshot {
             })
             .cloned()
             .collect();
-        if !blocking.is_empty() {
+        if blocking.iter().any(|issue| {
+            !allow_parser_errors || !matches!(issue.kind, IssueKind::ParserError { .. })
+        }) {
             return Err(PlanRejection { blocking });
         }
 

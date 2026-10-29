@@ -205,6 +205,8 @@ When the selected closure contains a cycle, expansion counting is skipped: the c
 
 Plan construction fails - returning the blocking issues rather than a message - when anything blocking affects the selected closure: any project-scoped issue, or a source-scoped issue naming a file the closure contains. In practice that means missing includes, unreadable inputs, parser errors, cycles and repeated inclusion inside the closure, plus invalid configuration, an unnameable path and incomplete discovery anywhere.
 
+An explicit compile rejected only for parser errors can derive a diagnostics-only plan from the same snapshot. It preserves the entrypoint order, include resolution, and every structural validation check while allowing YARA-X to recover semantic errors and warnings. It cannot build, install, or cache rules, even if the source is repaired after analysis. Compiler parser errors replace matching analysis diagnostics by file and starting byte offset; analysis errors the compiler does not reproduce remain visible. Cache restoration and freshness checks continue to require a normal, valid compilation plan and never run this diagnostics pass.
+
 The closure contains each canonical input exactly once, because a plan is a set of inputs. That is not a claim that YARA-X would expand each file once; it would not, which is exactly why repeated inclusion is reported separately and blocks the plan.
 
 Keeping the two apart means a caller can display an invalid graph and a validated plan through the same types, and there is exactly one place that decides "compilable".

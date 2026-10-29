@@ -13,10 +13,10 @@
 //! ```
 //!
 //! Analysis happens here, immediately before compiling, so what is compiled is
-//! what is on disk now rather than whatever the frontend last saw. A
-//! `PlanRejection` refuses compilation outright: YARA-X is never invoked for a
-//! project the model has already found to be broken, because its errors would
-//! describe symptoms of a problem the model can describe precisely.
+//! what is on disk now rather than whatever the frontend last saw.
+//! Structural plan rejections refuse compilation outright. Parser errors alone
+//! allow a diagnostics-only pass through YARA-X, so recoverable errors and
+//! warnings are still reported. Rejected projects never produce a ruleset.
 //!
 //! # Matching the model's include resolution
 //!
@@ -80,6 +80,25 @@ impl Compiled {
     }
 }
 
+/// A rejected project, optionally safe for a diagnostics-only compiler pass.
+/// Keeping this separate from a successful plan prevents cache restoration and
+/// freshness checks from invoking YARA-X or accepting a rejected project.
+#[derive(Debug)]
+pub(crate) struct ProjectPlanError {
+    diagnostics: Vec<Diagnostic>,
+    diagnostic_plan: Option<Box<CompilationPlan>>,
+}
+
+impl ProjectPlanError {
+    /// Collects recoverable compiler diagnostics on an explicit compile only.
+    pub(crate) fn diagnose(self) -> Compiled {
+        match self.diagnostic_plan {
+            Some(plan) => compile_plan_with_diagnostics(&plan, self.diagnostics),
+            None => Compiled::failed(self.diagnostics),
+        }
+    }
+}
+
 /// Compiles a single in-memory source: the scratch buffer, when no project
 /// folder is open.
 ///
@@ -95,7 +114,7 @@ pub fn scratch(text: &str) -> Compiled {
     // and the frontend keeps them on the active editor rather than trying to
     // open a file that does not exist.
     let _ = compiler.add_source(SourceCode::from(text));
-    finish(compiler, &Origins::default())
+    finish(compiler, &Origins::default(), Vec::new())
 }
 
 /// Analyzes `root` and compiles it from the resulting plan.
@@ -103,20 +122,23 @@ pub fn scratch(text: &str) -> Compiled {
 pub fn project(root: &Path) -> Compiled {
     let plan = match project_plan(root) {
         Ok(plan) => plan,
-        Err(compiled) => return compiled,
+        Err(failure) => return failure.diagnose(),
     };
 
     compile_plan(&plan)
 }
 
 /// Opens and validates a project without invoking YARA-X.
-pub(crate) fn project_plan(root: &Path) -> Result<CompilationPlan, Compiled> {
+pub(crate) fn project_plan(root: &Path) -> Result<CompilationPlan, ProjectPlanError> {
     let snapshot = match open_project(root) {
         Ok(snapshot) => snapshot,
         // A configuration failure is the user's problem, described precisely, so
         // it becomes a diagnostic rather than an IPC rejection.
         Err(err) => {
-            return Err(Compiled::failed(vec![config_diagnostic(&err)]));
+            return Err(ProjectPlanError {
+                diagnostics: vec![config_diagnostic(&err)],
+                diagnostic_plan: None,
+            });
         }
     };
 
@@ -127,7 +149,10 @@ pub(crate) fn project_plan(root: &Path) -> Result<CompilationPlan, Compiled> {
         // diagnostic the user cannot click through is barely a diagnostic.
         Err(rejection) => {
             let root = snapshot.definition().root();
-            return Err(Compiled::failed(rejection_diagnostics(&rejection, root)));
+            return Err(ProjectPlanError {
+                diagnostics: rejection_diagnostics(&rejection, root),
+                diagnostic_plan: snapshot.diagnostic_plan().ok().map(Box::new),
+            });
         }
     };
     Ok(plan)
@@ -140,12 +165,20 @@ pub(crate) fn project_plan(root: &Path) -> Result<CompilationPlan, Compiled> {
 /// closure member independently would compile it twice and duplicate every rule
 /// identifier it defines.
 pub(crate) fn compile_plan(plan: &CompilationPlan) -> Compiled {
+    compile_plan_with_diagnostics(plan, Vec::new())
+}
+
+fn compile_plan_with_diagnostics(
+    plan: &CompilationPlan,
+    mut rejected: Vec<Diagnostic>,
+) -> Compiled {
     // Every path YARA-X will touch has to be expressible before anything is
     // compiled: it panics on a non-Unicode included path, and an entrypoint that
     // cannot be written as an include literal cannot be compiled with the
     // parent-first semantics the model promises. Both are reported instead.
     if let Err(diagnostics) = check_representable(plan) {
-        return Compiled::failed(diagnostics);
+        rejected.extend(diagnostics);
+        return Compiled::failed(rejected);
     }
 
     let mut compiler = Compiler::new();
@@ -170,19 +203,32 @@ pub(crate) fn compile_plan(plan: &CompilationPlan) -> Compiled {
     // An empty plan is a valid plan: a project with no rule files compiles
     // successfully to zero rules, so Scan runs and matches nothing rather than
     // the user having to interpret a failure that is not one.
-    finish(compiler, &Origins::new(plan))
+    finish(compiler, &Origins::new(plan), rejected)
 }
 
-/// Collects diagnostics from a compiler and builds the rules if it is clean.
-fn finish(compiler: Compiler<'_>, origins: &Origins) -> Compiled {
+/// Collects compiler diagnostics, retaining analysis errors the compiler did
+/// not reproduce (for example, if a file was repaired since planning). A
+/// rejected analysis can never build rules, even if YARA-X now sees clean input.
+fn finish(compiler: Compiler<'_>, origins: &Origins, mut rejected: Vec<Diagnostic>) -> Compiled {
+    let analysis_failed = !rejected.is_empty();
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for e in compiler.errors() {
-        diagnostics.push(origins.rewrite(error_to_diagnostic(e)));
+        let diagnostic = origins.rewrite(error_to_diagnostic(e));
+        if is_parser_error(e) {
+            // Prefer the compiler's error over the include parser's report of
+            // the same location. UTF-8 span ends can differ because YARA-X's
+            // reports account for replacement characters.
+            rejected.retain(|prior| {
+                prior.file != diagnostic.file || prior.span.start != diagnostic.span.start
+            });
+        }
+        diagnostics.push(diagnostic);
     }
+    diagnostics.extend(rejected);
     for w in compiler.warnings() {
         diagnostics.push(origins.rewrite(warning_to_diagnostic(w)));
     }
-    if !compiler.errors().is_empty() {
+    if analysis_failed || !compiler.errors().is_empty() {
         return Compiled::failed(diagnostics);
     }
 
@@ -193,6 +239,20 @@ fn finish(compiler: Compiler<'_>, origins: &Origins) -> Compiled {
         diagnostics,
         rule_count,
     }
+}
+
+fn is_parser_error(error: &yara_x::errors::CompileError) -> bool {
+    use yara_x::errors::CompileError;
+    matches!(
+        error,
+        CompileError::SyntaxError(_)
+            | CompileError::InvalidInteger(_)
+            | CompileError::InvalidFloat(_)
+            | CompileError::InvalidRegexpModifier(_)
+            | CompileError::InvalidEscapeSequence(_)
+            | CompileError::InvalidUTF8(_)
+            | CompileError::UnexpectedEscapeSequence(_)
+    )
 }
 
 // ---- Include directories ----

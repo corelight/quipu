@@ -749,7 +749,7 @@ fn project_work_with(
     let mut write_claim = cache.capture_write_claim(root);
     let mut plan = match crate::compile::project_plan(root) {
         Ok(plan) => plan,
-        Err(failure) => return ProjectWork::Failed(failure),
+        Err(failure) => return ProjectWork::Failed(failure.diagnose()),
     };
 
     match cache.load(&plan) {
@@ -760,7 +760,7 @@ fn project_work_with(
                 // The entry was valid for the first observation, but the project is
                 // no longer valid. Treat the hit as transient and let the current
                 // compile report the new project state without installing it.
-                Err(failure) => return ProjectWork::Failed(failure),
+                Err(failure) => return ProjectWork::Failed(failure.diagnose()),
             };
             if second.fingerprint() == plan.fingerprint() {
                 return ProjectWork::Ready {
