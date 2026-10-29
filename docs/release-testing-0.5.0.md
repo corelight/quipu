@@ -57,4 +57,3 @@ fa1345d66aa90d4e4027a0daf676fe57f912faba951182669eba9b80f3babfb2  Quipu-0.5.0-1.
 56d57577f0c24e6af2dae19aa7df2cd8d47d906e74c455b69ea3e464765d5437  Quipu_0.5.0_x64_en-US-offline.msi
 76363edcefbb5f1ce653176ae75c39a2600642a0f983cd16ff0d07e706ec67ce  Quipu_0.5.0_x64_en-US.msi
 ```
-
