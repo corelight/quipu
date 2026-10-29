@@ -34,6 +34,8 @@ Select the close button in the dock when you have finished inspecting the bytes.
 
 The Problems tab contains messages produced by a full compile, along with operational errors Quipu needs to keep visible. Compiler entries show their severity, code, file, line, and column. Select an entry with a source location to open the file and reveal that position.
 
+Syntax errors and invalid UTF-8 still allow Quipu to collect recoverable compiler errors and warnings from the workspace. The compile fails and Scan stays unavailable until the errors are fixed. Structural project problems, such as missing includes or include cycles, must be resolved before the compiler can run.
+
 Quipu limits the rendered list for very large compilations. When more messages exist, the bottom of the list says how many were omitted from the display.
 
 Successful compiled-cache restoration also restores the warnings from the original compilation, so Problems remains consistent with the loaded ruleset.

@@ -9,6 +9,12 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Parser errors, including invalid UTF-8, hiding recoverable compiler errors
+  and warnings elsewhere in the workspace. Failed compilations still leave
+  Scan unavailable and do not cache a partial ruleset.
+
 ## [0.5.0] - 2026-10-29
 
 ### Added
