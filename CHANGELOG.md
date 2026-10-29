@@ -9,6 +9,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-29
+
 ### Fixed
 
 - Parser errors, including invalid UTF-8, hiding recoverable compiler errors
@@ -102,7 +104,8 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bundled example projects and offline documentation.
 - A bounded compiled-rules cache.
 
-[Unreleased]: https://github.com/corelight/quipu/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/corelight/quipu/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/corelight/quipu/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/corelight/quipu/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/corelight/quipu/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/corelight/quipu/compare/v0.2.0...v0.3.0
