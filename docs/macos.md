@@ -100,8 +100,10 @@ launch, and signature/notarization assessment checks in a macOS VM. The DMG
 arrived via `scp`, so that launch does not establish browser-download Gatekeeper
 behavior. A coworker subsequently confirmed use of the signed DMG on an Apple Silicon
 Mac without issues; the browser-download prompt recognized Apple notarization.
-The new YARA-X 1.22.1 release requires fresh full acceptance; see
-[0.5.0 testing](release-testing-0.5.0.md).
+The maintainer subsequently confirmed all 0.5.0 checks passed on all platforms,
+including Apple Silicon and Intel with YARA-X 1.22.1 / Wasmtime 48.0.7. See the
+[0.5.0 acceptance record](release-testing-0.5.0.md) for provenance and the scope
+of the reported results.
 
 The workflow runs frontend tests, builds the frontend and bundled documentation,
 runs Clippy and Rust tests (including YARA compilation/scanning and filesystem
