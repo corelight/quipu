@@ -7,7 +7,7 @@ updated.
 
 The YARA-X 1.22.1 update was assessed on 2026-10-27 with cargo-audit 0.22.2
 and a freshly fetched advisory database. The lockfile now has one YARA-X
-release, Wasmtime 48.0.7, crypto-bigint 0.7.10, RSA 0.10.0-rc.19, and ZIP 9.1.2.
+release, Wasmtime 48.0.8, crypto-bigint 0.7.10, RSA 0.10.0-rc.19, and ZIP 9.1.2.
 The remaining exceptions cover RSA public-key verification, GLib, and plist's
 quick-xml usage. No new exceptions are added.
 
@@ -22,6 +22,20 @@ The yanked spin 0.9.8 dependency is no longer present.
 The all-target Wasmtime feature graph still excludes async, GC, WASI, and
 component support. An exception applies only to the described APIs, features,
 and dependency paths; it must be reviewed if any of those change.
+
+## Wasmtime 48.0.8 security update (2026-11-04)
+
+The lockfile updates Wasmtime and its matching Cranelift/Pulley crates from
+48.0.7/0.135.7 to 48.0.8/0.135.8. This fixes RUSTSEC-2026-0422,
+RUSTSEC-2026-0423, and RUSTSEC-2026-0424, reported on 2026-10-29. These cover
+typed-function argument validation, cross-engine GC type confusion, and
+borrowed component resources. The resolved Wasmtime feature graph remains
+limited to Cranelift, runtime, and their supporting features; GC and component
+support remain disabled. YARA-X stays at 1.22.1.
+
+Rechecked on 2026-11-04 with cargo-audit 0.22.2 and a freshly fetched advisory
+database. The audit passes with the existing four exceptions below; no new
+exceptions or audit suppressions are needed.
 
 ## Cache trust model
 
@@ -129,6 +143,10 @@ reviewed as dependency-maintenance work:
 - `zbus_names` 4.3.4, `zvariant` 5.15.0, and `zvariant_derive` 5.15.0 are
   unmaintained and come from the Tauri dialog/portal stack. Revisit when its
   upstream dependencies offer a maintained replacement.
+- `async-executor` 1.14.0 is yanked and comes through `zbus` 5.19.0 from
+  `tauri-plugin-opener` 2.7.2. The 2026-11-04 audit reports this as an
+  informational warning, with no associated vulnerability. Revisit the locked
+  version when updating the opener/portal stack.
 
 Recheck these paths on every Tauri and YARA-X update. A warning that becomes a
 vulnerability must either be fixed or receive its own narrowly scoped exception
