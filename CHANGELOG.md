@@ -9,6 +9,11 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- Update Wasmtime to 48.0.8 and its matching compiler dependencies to fix
+  RUSTSEC-2026-0422, RUSTSEC-2026-0423, and RUSTSEC-2026-0424.
+
 ## [0.5.1] - 2026-10-29
 
 ### Fixed
