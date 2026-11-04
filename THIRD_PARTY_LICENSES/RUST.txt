@@ -673,7 +673,7 @@ Used by:
 - cranelift-native 0.135.8 — https://github.com/bytecodealliance/wasmtime
 - linux-raw-sys 0.12.1 — https://github.com/sunfishcode/linux-raw-sys
 - regalloc2 0.15.2 — https://github.com/bytecodealliance/regalloc2
-- rustix 1.1.5 — https://github.com/bytecodealliance/rustix
+- rustix 1.1.6 — https://github.com/bytecodealliance/rustix
 - target-lexicon 0.13.5 — https://github.com/bytecodealliance/target-lexicon
 - wasm-encoder 0.254.2 — https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasm-encoder
 - wasmparser 0.254.2 — https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasmparser
@@ -5860,7 +5860,7 @@ Used by:
 - roxmltree 0.21.1 — https://github.com/RazrFalcon/roxmltree
 - rustc-hash 1.1.0 — https://github.com/rust-lang-nursery/rustc-hash
 - rusticata-macros 4.1.0 — https://github.com/rusticata/rusticata-macros.git
-- rustix 1.1.5 — https://github.com/bytecodealliance/rustix
+- rustix 1.1.6 — https://github.com/bytecodealliance/rustix
 - scopeguard 1.2.0 — https://github.com/bluss/scopeguard
 - serde_with 3.21.0 — https://github.com/jonasbb/serde_with/
 - serde_with_macros 3.21.0 — https://github.com/jonasbb/serde_with/
@@ -8813,6 +8813,7 @@ Used by:
 - objc2-app-kit 0.3.2 — https://github.com/madsmtm/objc2
 - objc2-core-foundation 0.3.2 — https://github.com/madsmtm/objc2
 - objc2-core-graphics 0.3.2 — https://github.com/madsmtm/objc2
+- objc2-core-services 0.3.2 — https://github.com/madsmtm/objc2
 - objc2-exception-helper 0.1.1 — https://github.com/madsmtm/objc2
 - objc2-quartz-core 0.3.2 — https://github.com/madsmtm/objc2
 - objc2-web-kit 0.3.2 — https://github.com/madsmtm/objc2
@@ -9306,7 +9307,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 Creative Commons Zero v1.0 Universal (CC0-1.0)
 
 Used by:
-- notify 8.2.0 — https://github.com/notify-rs/notify.git
+- notify 8.2.1 — https://github.com/notify-rs/notify.git
 
 Creative Commons CC0 1.0 Universal
 
@@ -10826,7 +10827,7 @@ MIT License (MIT)
 Used by:
 - aho-corasick 1.1.4 — https://github.com/BurntSushi/aho-corasick
 - byteorder 1.5.0 — https://github.com/BurntSushi/byteorder
-- globset 0.4.20 — https://github.com/BurntSushi/ripgrep/tree/master/crates/globset
+- globset 0.4.21 — https://github.com/BurntSushi/ripgrep/tree/master/crates/globset
 - memchr 2.8.3 — https://github.com/BurntSushi/memchr
 - termcolor 1.4.1 — https://github.com/BurntSushi/termcolor
 - walkdir 2.5.0 — https://github.com/BurntSushi/walkdir
@@ -10912,36 +10913,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-
--------------------------------------------------------------------------------
-MIT License (MIT)
-
-Used by:
-- fsevent-sys 4.1.0 — https://github.com/octplane/fsevent-rust/tree/master/fsevent-sys
-
-The MIT License (MIT)
-
-Copyright (c) 2015 Pierre Baillet
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
 
 
 -------------------------------------------------------------------------------
