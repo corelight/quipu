@@ -4,7 +4,8 @@ This is the setup guide for the private
 [`simeonmiteff/quipu-apple-signing`](https://github.com/simeonmiteff/quipu-apple-signing)
 repository. Developer ID signing, notarization, stapling, and Gatekeeper checks
 have passed for both 0.4.0 architectures as of 2026-10-23 Brisbane time.
-Signed-app desktop acceptance testing remains outstanding before a normal release.
+The maintainer has now confirmed all 0.5.0 manual checks passed on all platforms;
+see the [production acceptance record](release-testing-0.5.0.md).
 The signed packages are published in the
 [macOS testing prerelease](https://github.com/corelight/quipu/releases/tag/macos-signing-test-1).
 Public macOS CI continues to produce experimental ad-hoc-signed DMGs.
