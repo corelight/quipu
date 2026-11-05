@@ -239,7 +239,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/tauri.git
 Creator: Person: Daniel Thompson-Yvetot
 
 -------------------------------------------------------------------------------
-@tauri-apps/plugin-dialog 2.8.3
+@tauri-apps/plugin-dialog 2.8.4
 Declared license: MIT OR Apache-2.0
 Source: https://github.com/tauri-apps/plugins-workspace
 
