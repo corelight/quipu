@@ -9247,7 +9247,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (BSD-3-Clause)
 
 Used by:
-- yara-x-ls 1.22.1 — https://github.com/VirusTotal/yara-x
+- yara-x-ls 1.23.0 — https://github.com/VirusTotal/yara-x
 
 Copyright (c) 2024. The YARA-X Authors. All Rights Reserved.
 
@@ -9280,10 +9280,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 BSD 3-Clause &quot;New&quot; or &quot;Revised&quot; License (BSD-3-Clause)
 
 Used by:
-- yara-x 1.22.1 — https://github.com/VirusTotal/yara-x
-- yara-x-fmt 1.22.1 — https://github.com/VirusTotal/yara-x
-- yara-x-macros 1.22.1 — https://github.com/VirusTotal/yara-x
-- yara-x-parser 1.22.1 — https://github.com/VirusTotal/yara-x
+- yara-x 1.23.0 — https://github.com/VirusTotal/yara-x
+- yara-x-fmt 1.23.0 — https://github.com/VirusTotal/yara-x
+- yara-x-macros 1.23.0 — https://github.com/VirusTotal/yara-x
+- yara-x-parser 1.23.0 — https://github.com/VirusTotal/yara-x
 - alloc-stdlib 0.3.0 — https://github.com/dropbox/rust-alloc-no-stdlib
 
 Copyright (c) <year> <owner>.

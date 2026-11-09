@@ -5,22 +5,26 @@ exception is listed here with a specific rationale. Exceptions are temporary
 and must be reconsidered whenever the affected dependency or its parent stack is
 updated.
 
-The YARA-X 1.22.1 update was assessed on 2026-10-27 with cargo-audit 0.22.2
-and a freshly fetched advisory database. The lockfile now has one YARA-X
+The YARA-X 1.23.0 update was assessed on 2026-11-09 with cargo-audit 0.22.2
+and a freshly fetched advisory database (commit
+`7a40350e1b8ba5b656d909f88222a8059a83d88d`). The lockfile has one YARA-X
 release, Wasmtime 48.0.8, crypto-bigint 0.7.10, RSA 0.10.0-rc.19, and ZIP 9.1.2.
-The remaining exceptions cover RSA public-key verification, GLib, and plist's
-quick-xml usage. No new exceptions are added.
+The audit passes with the existing exceptions for RSA public-key verification,
+GLib, and plist's quick-xml usage. No new exceptions are added. Dependency
+changes are limited to the YARA-X family; the existing Wasmtime 48.0.8 and
+Cranelift versions are retained.
 
-The upgrade removes the seven Wasmtime exceptions (RUSTSEC-2026-0222,
+The earlier 1.22.1 upgrade removed the seven Wasmtime exceptions (RUSTSEC-2026-0222,
 RUSTSEC-2026-0269, RUSTSEC-2026-0316, RUSTSEC-2026-0327, RUSTSEC-2026-0359,
 RUSTSEC-2026-0362, RUSTSEC-2026-0363) and the three ZIP extraction exceptions
 (RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369), because the locked
-versions include the fixes. It also fixes the newly reported AArch64 Wasmtime
+versions include the fixes. It also fixed the then-new AArch64 Wasmtime
 advisory RUSTSEC-2026-0379 and crypto-bigint advisory RUSTSEC-2026-0387.
 The yanked spin 0.9.8 dependency is no longer present.
 
 The all-target Wasmtime feature graph still excludes async, GC, WASI, and
-component support. An exception applies only to the described APIs, features,
+component support. YARA-X's `magic-module` and `native-code-serialization`
+features remain disabled. An exception applies only to the described APIs, features,
 and dependency paths; it must be reviewed if any of those change.
 
 ## Wasmtime 48.0.8 security update (2026-11-04)
@@ -31,7 +35,7 @@ RUSTSEC-2026-0423, and RUSTSEC-2026-0424, reported on 2026-10-29. These cover
 typed-function argument validation, cross-engine GC type confusion, and
 borrowed component resources. The resolved Wasmtime feature graph remains
 limited to Cranelift, runtime, and their supporting features; GC and component
-support remain disabled. YARA-X stays at 1.22.1.
+support remain disabled. That update kept YARA-X at 1.22.1.
 
 Rechecked on 2026-11-04 with cargo-audit 0.22.2 and a freshly fetched advisory
 database. The audit passes with the existing four exceptions below; no new
@@ -85,7 +89,7 @@ Remove the override and alias when Monaco itself ships a patched sanitizer.
   this path and calls `Pkcs1v15Sign::verify` while inspecting file signatures.
   It neither loads an RSA private key nor performs signing or decryption, so
   there is no private key for the affected side channel to disclose.
-  Rechecked against YARA-X 1.22.1 on 2026-10-27; the RSA prerelease is
+  Rechecked against YARA-X 1.23.0 on 2026-11-09; the RSA prerelease is
   still affected according to RustSec, and the public-key-only usage remains.
 - **Removal condition:** Remove the exception when YARA-X adopts a patched RSA
   implementation, removes this dependency, or starts using private-key

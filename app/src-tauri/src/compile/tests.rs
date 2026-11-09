@@ -90,6 +90,65 @@ fn an_empty_scratch_buffer_is_a_successful_zero_rule_compilation() {
 }
 
 #[test]
+fn regex_bindings_and_undefined_variables_scan_correctly_before_and_after_serialization() {
+    let fixture = Fixture::new();
+    fixture.manifest("schema = 1\nentrypoints = [\"main.yar\"]\n");
+    fixture.write("main.yar", "include \"lib.yar\"\n");
+    // Variables 8 and 64 used to share an undefined-value bit. Reading byte 0
+    // must not make an out-of-bounds read of byte 1 appear defined.
+    let variables = (0..=64)
+        .map(|i| match i {
+            8 => "v8 = uint8(1)".to_string(),
+            64 => "v64 = uint8(0)".to_string(),
+            _ => format!("v{i} = 0"),
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    fixture.write(
+        "lib.yar",
+        &format!(
+            r#"
+            import "math"
+            rule regex_binding {{
+                condition:
+                    with re = /^65$/ : (math.to_string(uint8(0)) matches re)
+            }}
+            rule undefined_variable {{
+                condition:
+                    with {variables} : (not defined v8 and v64 == 65)
+            }}
+            "#
+        ),
+    );
+
+    let compiled = project(&fixture.root);
+    assert_eq!(
+        rule_names(&compiled),
+        ["regex_binding", "undefined_variable"]
+    );
+    let rules = compiled.rules.as_ref().unwrap();
+    let restored = yara_x::Rules::deserialize(rules.serialize().expect("serialize"))
+        .expect("deserialize portable rules");
+    for rules in [rules.as_ref(), &restored] {
+        // Reusing a scanner must reset undefined values and previous matches.
+        let mut scanner = yara_x::Scanner::new(rules);
+        let cases: &[(&[u8], &[&str])] = &[
+            (b"A", &["regex_binding", "undefined_variable"]),
+            (b"AB", &["regex_binding"]),
+            (b"B", &[]),
+            (b"", &[]),
+            (b"A", &["regex_binding", "undefined_variable"]),
+        ];
+        for (input, expected) in cases {
+            let results = scanner.scan(input).expect("scan");
+            let mut matches: Vec<_> = results.matching_rules().map(|r| r.identifier()).collect();
+            matches.sort();
+            assert_eq!(&matches, expected, "input: {input:?}");
+        }
+    }
+}
+
+#[test]
 fn a_scratch_error_names_no_file_so_it_stays_on_the_active_editor() {
     let compiled = scratch("rule broken { condition: }\n");
 

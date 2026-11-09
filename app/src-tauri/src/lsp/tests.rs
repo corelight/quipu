@@ -124,6 +124,57 @@ async fn embedded_server_provides_editor_features_and_live_diagnostics() {
             .iter()
             .any(|d| d["severity"] == 1)
     );
+
+    // The server reports UTF-16 columns, as Monaco expects, even when a
+    // supplementary character and accented text precede the diagnostic.
+    let prefix = "rule sample { condition: /* 🦀é */ ";
+    client.send(
+        json!({"jsonrpc": "2.0", "method": "textDocument/didChange", "params": {
+            "textDocument": {"uri": uri, "version": 3},
+            "contentChanges": [{"text": format!("{prefix}missing_identifier }}")}]
+        }}),
+    );
+    let diagnostic = client
+        .receive(|m| m["method"] == "textDocument/publishDiagnostics")
+        .await;
+    let error = diagnostic["params"]["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["severity"] == 1)
+        .expect("undefined identifier diagnostic");
+    assert_eq!(
+        error["range"],
+        json!({
+            "start": {"line": 0, "character": prefix.encode_utf16().count()},
+            "end": {"line": 0, "character": prefix.encode_utf16().count() + "missing_identifier".len()}
+        })
+    );
+
+    // Reopening a document must use its current text and UTF-16 hover positions.
+    client.send(
+        json!({"jsonrpc": "2.0", "method": "textDocument/didClose", "params": {
+            "textDocument": {"uri": uri}
+        }}),
+    );
+    let prefix = "rule r { strings: $a = \"fresh\" condition: /* 🦀é */ ";
+    client.send(
+        json!({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+            "textDocument": {"uri": uri, "languageId": "yara", "version": 1,
+                "text": format!("{prefix}$a }}")}
+        }}),
+    );
+    // A request also gives the server a chance to process the preceding open.
+    let hover = client
+        .request(
+            5,
+            "textDocument/hover",
+            json!({"textDocument": {"uri": uri}, "position": {
+                "line": 0, "character": prefix.encode_utf16().count() + 1
+            }}),
+        )
+        .await;
+    assert!(hover["contents"].to_string().contains("fresh"), "{hover}");
     server.abort();
     writer.abort();
 }
