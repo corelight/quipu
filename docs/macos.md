@@ -105,6 +105,12 @@ including Apple Silicon and Intel with YARA-X 1.22.1 / Wasmtime 48.0.7. See the
 [0.5.0 acceptance record](release-testing-0.5.0.md) for provenance and the scope
 of the reported results.
 
+The final signed 0.5.1 packages subsequently passed maintainer acceptance on
+both architectures; see [0.5.1 testing](release-testing-0.5.1.md). The YARA-X
+1.23.0 / Wasmtime 48.0.8 update requires fresh compilation, scanning, and cache
+restoration checks in the final signed apps on both architectures. Earlier
+release acceptance does not cover the updated engine.
+
 The workflow runs frontend tests, builds the frontend and bundled documentation,
 runs Clippy and Rust tests (including YARA compilation/scanning and filesystem
 operations), and builds the app and DMG. Package validation mounts the final DMG

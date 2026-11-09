@@ -303,7 +303,7 @@ The private workflow applies the separate Developer ID signing configuration
 and validation path after the public build, while ordinary pull-request builds
 remain credential-free.
 
-Quipu uses Wasmtime 48.0.7 through YARA-X. Its Unix code-memory implementation
+Quipu uses Wasmtime 48.0.8 through YARA-X. Its Unix code-memory implementation
 uses `mprotect` to make generated code executable. The private workflow includes
 `com.apple.security.cs.allow-unsigned-executable-memory` for that implementation;
 do not assume `com.apple.security.cs.allow-jit` alone covers a runtime that does

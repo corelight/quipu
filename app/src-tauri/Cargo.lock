@@ -6737,8 +6737,8 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "annotate-snippets",
  "anyhow",
@@ -6806,8 +6806,8 @@ dependencies = [
 
 [[package]]
 name = "yara-x-fmt"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -6817,8 +6817,8 @@ dependencies = [
 
 [[package]]
 name = "yara-x-ls"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "async-lsp",
  "bitflags 2.13.2",
@@ -6846,8 +6846,8 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "darling 0.24.1",
  "proc-macro2",
@@ -6857,8 +6857,8 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "ascii_tree",
  "bitflags 2.13.2",
@@ -6874,8 +6874,8 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "1.22.1"
-source = "git+https://github.com/VirusTotal/yara-x?tag=v1.22.1#198fa48a5fbab79b88edc9bb16df99da4caffe91"
+version = "1.23.0"
+source = "git+https://github.com/VirusTotal/yara-x?tag=v1.23.0#afe4585b12f56c698794dc80b3d28ddb87b56c0a"
 dependencies = [
  "base64 0.23.1",
  "chrono",

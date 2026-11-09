@@ -9,6 +9,13 @@ and Quipu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade the YARA-X compiler, include parser, and language server together to
+  1.23.0, improving scan correctness, compiler/parser robustness, and Unicode
+  editor diagnostics. Compiled caches from earlier engine versions require
+  recompilation.
+
 ### Security
 
 - Update Wasmtime to 48.0.8 and its matching compiler dependencies to fix
