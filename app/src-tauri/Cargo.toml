@@ -85,3 +85,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Securit
 [dev-dependencies]
 # Project-model tests build throwaway project trees on disk.
 tempfile = "3"
+
+[profile.dev]
+# Retain useful backtraces with smaller debug info; tests inherit this setting.
+debug = 1

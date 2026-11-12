@@ -30,6 +30,23 @@ dependencies from source.
 Apple Silicon and Intel macOS builds are described in
 [macOS development](docs/macos.md), including prerequisites and desktop checks.
 
+### Build cache and disk usage
+
+Use `app/src-tauri/target` for routine Rust builds and tests, including Tauri
+and UI harness runs. Cargo's repository configuration makes this location
+explicit. Keep `CARGO_TARGET_DIR` unset and avoid `--target-dir` overrides for
+routine work: alternate locations such as `/tmp/quipu-deps-target` duplicate
+compiled dependencies and consume additional disk space. If an investigation
+requires an isolated build cache, remove that temporary cache when finished.
+
+The committed `[profile.dev]` setting in `app/src-tauri/Cargo.toml` uses
+`debug = 1` to reduce debug information while retaining useful backtraces.
+The test profile inherits this setting; release builds are unaffected.
+Builds still keep separate artifacts for different profiles, features, and
+toolchains, so the shared cache can grow over time. Run `cargo clean` from
+`app/src-tauri` when you need to reclaim that space; the next build will
+recompile dependencies.
+
 ## Required checks
 
 Run the checks relevant to your change. Before requesting review, a complete
