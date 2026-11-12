@@ -1,3 +1,7 @@
+[build]
+# Reuse one repository-local cache for routine builds and tests.
+target-dir = "target"
+
 [env]
 # YARA-X's release sources already contain generated module bindings. Re-running
 # that upstream generation would require protoc and mutate Cargo's git checkout.
